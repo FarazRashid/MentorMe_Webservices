@@ -22,6 +22,7 @@ import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
+import com.muhammadfarazrashid.i2106595.managers.WebserviceHelper
 
 class searchResultsActivity : AppCompatActivity() {
 
@@ -48,64 +49,51 @@ class searchResultsActivity : AppCompatActivity() {
     }
 
     private fun fetchUserFavorites() {
-        val userId = FirebaseAuth.getInstance().currentUser!!.uid
-        val favoritesRef = FirebaseDatabase.getInstance().getReference("users").child(userId).child("favorites")
-        favoritesRef.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                val favoriteMentorIds = mutableListOf<String>()
-                for (mentorSnapshot in snapshot.children) {
-                    val mentorId = mentorSnapshot.key
-                    mentorId?.let { favoriteMentorIds.add(it) }
-                    Log.d(MotionEffect.TAG, "Fetched favorite mentor ID: $mentorId")
-                }
-                // After fetching favorite mentor IDs, fetch mentor objects
-                initializeTopMentors(favoriteMentorIds)
-            }
+    val webserviceHelper = WebserviceHelper(this)
+    val userId = UserManager.getInstance().getCurrentUser()?.id ?: ""
 
-            override fun onCancelled(error: DatabaseError) {
-                Log.e(MotionEffect.TAG, "Failed to fetch user favorites: " + error.message)
+    webserviceHelper.getFavourites(userId, object : WebserviceHelper.FavouritesCallback {
+        override fun onSuccess(favourites: List<String?>?) {
+            if (favourites != null) {
+                initializeTopMentors(favourites.filterNotNull())
             }
-        })
-    }
+        }
+
+        override fun onError(errorMessage: String?) {
+            Log.e("searchResultsActivity", "Error getting favorites: $errorMessage")
+        }
+    })
+}
 
     //fetch mentors that have the search query in their name or position
     private fun initializeTopMentors(favoriteMentorIds: List<String>) {
-        var database = FirebaseDatabase.getInstance()
-        var myRef = database.getReference("Mentors")
+        val webserviceHelper = WebserviceHelper(this)
 
-        myRef.get().addOnSuccessListener {
-            if (it.exists()) {
-                val mentorList = it.children
+        webserviceHelper.getMentors { mentors ->
+            if (mentors != null) {
                 topMentors = ArrayList()
                 originalTopMentors = ArrayList()
-                for (mentor in mentorList) {
-                    val mentorData = mentor.getValue(Mentor::class.java)
-                    if (mentorData != null) {
-                        val mentorKey = mentor.key // Get the key of the DataSnapshot
-                        if (mentorData.name.contains(
-                                searchQuery.toString(),
-                                ignoreCase = true
-                            ) || mentorData.position.contains(
-                                searchQuery.toString(),
-                                ignoreCase = true
-                            )
-                        ) {
-                            Log.d("searchResultsActivity", "Mentor $mentorKey matches search query")
-                            if (favoriteMentorIds.contains(mentorKey)) {
-                                mentorData.isFavorite = true
-                                Log.d("searchResultsActivity", "Mentor $mentorKey is a favorite")
-                            }
-                            topMentors.add(mentorData)
-                            originalTopMentors.add(mentorData)
+
+                for (mentor in mentors) {
+                    if (mentor.name.contains(searchQuery.toString(), ignoreCase = true) ||
+                        mentor.position.contains(searchQuery.toString(), ignoreCase = true)) {
+                        Log.d("searchResultsActivity", "Mentor ${mentor.id} matches search query")
+
+                        if (favoriteMentorIds.contains(mentor.id)) {
+                            mentor.isFavorite = true
+                            Log.d("searchResultsActivity", "Mentor ${mentor.id} is a favorite")
                         }
+
+                        topMentors.add(mentor)
+                        originalTopMentors.add(mentor)
                     }
                 }
-                setupSearchResultsRecyclerView()
-            }
-        }.addOnFailureListener {
-            Log.e("searchResultsActivity", "Error getting data", it)
-        }
 
+                setupSearchResultsRecyclerView()
+            } else {
+                Log.e("searchResultsActivity", "Error getting data")
+            }
+        }
     }
 
     private fun setupSearchResultsRecyclerView() {
