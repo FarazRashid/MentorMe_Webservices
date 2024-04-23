@@ -28,6 +28,7 @@ import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageReference
 import com.muhammadfarazrashid.i2106595.dataclasses.User
 import com.muhammadfarazrashid.i2106595.dataclasses.getUserWithEmail
+import com.muhammadfarazrashid.i2106595.managers.WebserviceHelper
 import com.squareup.picasso.Callback
 import com.squareup.picasso.MemoryPolicy
 import com.squareup.picasso.NetworkPolicy
@@ -211,41 +212,41 @@ class EditProfilePageActivity : AppCompatActivity() {
     }
 
 
-    private fun checkEmailAvailability(email: String, completion: (Boolean) -> Unit) {
-        val database = FirebaseDatabase.getInstance()
-        val usersRef = database.getReference("users")
-
-        usersRef.orderByChild("email").equalTo(email).addListenerForSingleValueEvent(object :
-            ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                val isAvailable = snapshot.childrenCount.toInt() == 0
-                completion(isAvailable)
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-                // Handle database error
-                completion(false)
-            }
-        })
-    }
-
-    private fun checkPhoneAvailability(phone: String, completion: (Boolean) -> Unit) {
-        val database = FirebaseDatabase.getInstance()
-        val usersRef = database.getReference("users")
-
-        usersRef.orderByChild("phone").equalTo(phone).addListenerForSingleValueEvent(object :
-            ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                val isAvailable = snapshot.childrenCount.toInt() == 0
-                completion(isAvailable)
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-                // Handle database error
-                completion(false)
-            }
-        })
-    }
+//    private fun checkEmailAvailability(email: String, completion: (Boolean) -> Unit) {
+//        val database = FirebaseDatabase.getInstance()
+//        val usersRef = database.getReference("users")
+//
+//        usersRef.orderByChild("email").equalTo(email).addListenerForSingleValueEvent(object :
+//            ValueEventListener {
+//            override fun onDataChange(snapshot: DataSnapshot) {
+//                val isAvailable = snapshot.childrenCount.toInt() == 0
+//                completion(isAvailable)
+//            }
+//
+//            override fun onCancelled(error: DatabaseError) {
+//                // Handle database error
+//                completion(false)
+//            }
+//        })
+//    }
+//
+//    private fun checkPhoneAvailability(phone: String, completion: (Boolean) -> Unit) {
+//        val database = FirebaseDatabase.getInstance()
+//        val usersRef = database.getReference("users")
+//
+//        usersRef.orderByChild("phone").equalTo(phone).addListenerForSingleValueEvent(object :
+//            ValueEventListener {
+//            override fun onDataChange(snapshot: DataSnapshot) {
+//                val isAvailable = snapshot.childrenCount.toInt() == 0
+//                completion(isAvailable)
+//            }
+//
+//            override fun onCancelled(error: DatabaseError) {
+//                // Handle database error
+//                completion(false)
+//            }
+//        })
+//    }
 
     private fun verify(field: String, value: String, completion: (Boolean) -> Unit) {
         if (field == "email") {
@@ -256,17 +257,18 @@ class EditProfilePageActivity : AppCompatActivity() {
                 completion(false)
                 return
             }
+            completion(true)
             // Check email availability
-            checkEmailAvailability(value) { isEmailAvailable ->
-                if (!isEmailAvailable) {
-                    email.error = "Email is already in use"
-                    email.requestFocus()
-                    completion(false)
-                    return@checkEmailAvailability
-                }
-                // If email is available, continue
-                completion(true)
-            }
+//            checkEmailAvailability(value) { isEmailAvailable ->
+//                if (!isEmailAvailable) {
+//                    email.error = "Email is already in use"
+//                    email.requestFocus()
+//                    completion(false)
+//                    return@checkEmailAvailability
+//                }
+//                // If email is available, continue
+//                completion(true)
+//            }
         } else if (field == "phone") {
             val phonePattern = "^[+]?[0-9]{13}$"
             if (!value.matches(phonePattern.toRegex())) {
@@ -275,94 +277,88 @@ class EditProfilePageActivity : AppCompatActivity() {
                 completion(false)
                 return
             }
+            completion(true)
             // Check phone number availability
-            checkPhoneAvailability(value) { isPhoneAvailable ->
-                if (!isPhoneAvailable) {
-                    phone.error = "Phone number is already in use"
-                    phone.requestFocus()
-                    completion(false)
-                    return@checkPhoneAvailability
-                }
-                // If phone number is available, continue
-                completion(true)
-            }
+//            checkPhoneAvailability(value) { isPhoneAvailable ->
+//                if (!isPhoneAvailable) {
+//                    phone.error = "Phone number is already in use"
+//                    phone.requestFocus()
+//                    completion(false)
+//                    return@checkPhoneAvailability
+//                }
+//                // If phone number is available, continue
+//                completion(true)
+//            }
         }
     }
 
 
-    private fun updateUser(field: String, value: String) {
-        val userId = currentUser.id
-        if (userId != null) {
-            val userRef = FirebaseDatabase.getInstance().getReference("users").child(userId)
-            userRef.child(field).setValue(value).addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    // Update email in Firebase Authentication if email field is being updated
-                    if (field == "email") {
-                        val currentUser = mAuth.currentUser
-                        if (currentUser != null) {
-                            currentUser.updateEmail(value).addOnCompleteListener { emailUpdateTask ->
-                                if (emailUpdateTask.isSuccessful) {
-                                    Log.d("UpdateUser", "Email updated successfully")
-                                } else {
-                                    Log.e("UpdateUser", "Failed to update email: ${emailUpdateTask.exception}")
-                                    // If updating email fails, rollback the change in the real-time database
-                                    userRef.child(field).setValue(currentUser.email, DatabaseReference.CompletionListener { rollbackError, _ ->
-                                        if (rollbackError != null) {
-                                            Log.e("UpdateUser", "Failed to rollback: $rollbackError")
-                                        } else {
-                                            Log.d("UpdateUser", "Rollback successful")
-                                        }
-                                    })
-                                }
-                            }
-                        }
-                    } else {
-                        Log.d("UpdateUser", "$field updated successfully")
-                    }
-                } else {
-                    Log.e("UpdateUser", "Failed to update $field: ${task.exception}")
-                }
-            }
-        }
-    }
+//    private fun updateUser(field: String, value: String) {
+//        val userId = currentUser.id
+//        if (userId != null) {
+//            val userRef = FirebaseDatabase.getInstance().getReference("users").child(userId)
+//            userRef.child(field).setValue(value).addOnCompleteListener { task ->
+//                if (task.isSuccessful) {
+//                    // Update email in Firebase Authentication if email field is being updated
+//                    if (field == "email") {
+//                        val currentUser = mAuth.currentUser
+//                        if (currentUser != null) {
+//                            currentUser.updateEmail(value).addOnCompleteListener { emailUpdateTask ->
+//                                if (emailUpdateTask.isSuccessful) {
+//                                    Log.d("UpdateUser", "Email updated successfully")
+//                                } else {
+//                                    Log.e("UpdateUser", "Failed to update email: ${emailUpdateTask.exception}")
+//                                    // If updating email fails, rollback the change in the real-time database
+//                                    userRef.child(field).setValue(currentUser.email, DatabaseReference.CompletionListener { rollbackError, _ ->
+//                                        if (rollbackError != null) {
+//                                            Log.e("UpdateUser", "Failed to rollback: $rollbackError")
+//                                        } else {
+//                                            Log.d("UpdateUser", "Rollback successful")
+//                                        }
+//                                    })
+//                                }
+//                            }
+//                        }
+//                    } else {
+//                        Log.d("UpdateUser", "$field updated successfully")
+//                    }
+//                } else {
+//                    Log.e("UpdateUser", "Failed to update $field: ${task.exception}")
+//                }
+//            }
+//        }
+//    }
 
 
     private fun submit() {
-        var hasError = false
+        val updates = mutableMapOf<String, String>()
 
         if (name.text.toString() != currentUser.name) {
-            updateUser("name", name.text.toString())
+            updates["name"] = name.text.toString()
+            UserManager.getCurrentUser()?.name = name.text.toString()
         }
         if (email.text.toString() != currentUser.email) {
-            verify("email", email.text.toString()) { isEmailValid ->
-                if (isEmailValid) {
-                    updateUser("email", email.text.toString())
-                } else {
-                    hasError = true
-                }
-            }
+            updates["email"] = email.text.toString()
+            UserManager.getCurrentUser()?.email = email.text.toString()
         }
         if (phone.text.toString() != currentUser.phone) {
-            verify("phone", phone.text.toString()) { isPhoneValid ->
-                if (isPhoneValid) {
-                    updateUser("phone", phone.text.toString())
-                } else {
-                    hasError = true
-                }
-            }
+            updates["phone"] = phone.text.toString()
+            UserManager.getCurrentUser()?.phone = phone.text.toString()
         }
         if (userCountrySpinner.selectedItem.toString() != currentUser.country) {
-            updateUser("country", userCountrySpinner.selectedItem.toString())
+            updates["country"] = userCountrySpinner.selectedItem.toString()
+            UserManager.getCurrentUser()?.country = userCountrySpinner.selectedItem.toString()
         }
         if (userCitySpinner.selectedItem.toString() != currentUser.city) {
-            updateUser("city", userCitySpinner.selectedItem.toString())
+            updates["city"] = userCitySpinner.selectedItem.toString()
+            UserManager.getCurrentUser()?.city = userCitySpinner.selectedItem.toString()
         }
 
-        // Check if there are errors or not
-        if (!hasError) {
-            onBackPressed() // Go back if there are no errors
-        }
+        val webserviceHelper = WebserviceHelper(this)
+        UserManager.getCurrentUser()?.let { webserviceHelper.updateUser(it.id,updates) }
+
     }
+
 
 }
 

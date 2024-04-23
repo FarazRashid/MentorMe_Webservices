@@ -125,31 +125,38 @@ public class MentorCardAdapter extends RecyclerView.Adapter<MentorCardAdapter.Vi
     }
 
     private void fetchUserFavorites() {
-        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-        DatabaseReference favoritesRef = FirebaseDatabase.getInstance().getReference("users").child(userId).child("favorites");
-        favoritesRef.addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                // Iterate through the favorites and update mentors accordingly
-                for (DataSnapshot mentorSnapshot : snapshot.getChildren()) {
-                    String mentorId = mentorSnapshot.getKey();
-                    if (mentorId != null) { // Add null check
-                        for (Mentor mentor : data) {
-                            if (mentorId.equals(mentor.getId())) { // Check for null mentor ID
-                                mentor.setFavorite(true);
-                                break;
-                            }
-                        }
-                    }
-                }
-                notifyDataSetChanged(); // Update the RecyclerView
-            }
 
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                Log.e(TAG, "Failed to fetch user favorites: " + error.getMessage());
-            }
-        });
+
+        for (Mentor mentor : data) {
+            mentor.setFavorite(Math.random() < 0.5);
+        }
+
+
+//        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+//        DatabaseReference favoritesRef = FirebaseDatabase.getInstance().getReference("users").child(userId).child("favorites");
+//        favoritesRef.addListenerForSingleValueEvent(new ValueEventListener() {
+//            @Override
+//            public void onDataChange(@NonNull DataSnapshot snapshot) {
+//                // Iterate through the favorites and update mentors accordingly
+//                for (DataSnapshot mentorSnapshot : snapshot.getChildren()) {
+//                    String mentorId = mentorSnapshot.getKey();
+//                    if (mentorId != null) { // Add null check
+//                        for (Mentor mentor : data) {
+//                            if (mentorId.equals(mentor.getId())) { // Check for null mentor ID
+//                                mentor.setFavorite(true);
+//                                break;
+//                            }
+//                        }
+//                    }
+//                }
+//                notifyDataSetChanged(); // Update the RecyclerView
+//            }
+//
+//            @Override
+//            public void onCancelled(@NonNull DatabaseError error) {
+//                Log.e(TAG, "Failed to fetch user favorites: " + error.getMessage());
+//            }
+//        });
     }
 
    public void updateList(List<Mentor>mentors)

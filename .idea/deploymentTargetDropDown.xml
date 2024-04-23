@@ -5,21 +5,6 @@
       <entry key="app">
         <State />
       </entry>
-      <entry key="homePageActivityTest">
-        <State />
-      </entry>
-      <entry key="loginPageActivityTest">
-        <State />
-      </entry>
-      <entry key="testClickingLoginButtonLaunchesHomePageActivity()">
-        <State />
-      </entry>
-      <entry key="testClickingLoginButtonWithOnlyPasswordLaunchesHomePageActivity()">
-        <State />
-      </entry>
-      <entry key="testLogin()">
-        <State />
-      </entry>
     </value>
   </component>
 </project>

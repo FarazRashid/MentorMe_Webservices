@@ -14,6 +14,7 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.muhammadfarazrashid.i2106595.dataclasses.NotificationsManager
+import com.muhammadfarazrashid.i2106595.managers.WebserviceHelper
 
 class homePageActivity : AppCompatActivity() {
 
@@ -64,45 +65,26 @@ class homePageActivity : AppCompatActivity() {
     }
 
     private fun fetchAllMentors() {
-        database.getReference("Mentors").addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                val mentors = mutableListOf<Mentor>()
-                // Iterate through all child nodes under "Mentors"
-                snapshot.children.forEach { mentorSnapshot ->
-                    val mentor = mentorSnapshot.getValue(Mentor::class.java)
-                    mentor?.let {
-                        // Set the id for each mentor based on the key of the child node
-                        it.id = mentorSnapshot.key
 
-                        it.rating = if (mentorSnapshot.child("currentRating").value is Long) {
-                            (mentorSnapshot.child("currentRating").value as Long).toInt()
-                        } else {
-                            mentorSnapshot.child("currentRating").value as? Int ?: 0
-                        }
+        val webserviceHelper = WebserviceHelper(this)
 
-                        Log.d("MentorRating", "Mentor rating: ${it.rating}")
-
-                        mentors.add(it)
-                    }
-                }
-                // Populate mentors RecyclerViews with the fetched mentors
+        webserviceHelper.getMentors { mentors ->
+            if (mentors != null) {
+                Log.d("homePageActivity", "Fetched mentors: ${mentors.size}")
                 setupMentorsRecycler(topMentorsRecycler, mentors)
-                setupMentorsRecycler(recentMentorsRecycler, mentors)
                 setupMentorsRecycler(educationMentorsRecycler, mentors)
+                setupMentorsRecycler(recentMentorsRecycler, mentors)
+
+            }
+            else{
+                Log.d("homePageActivity", "Failed to fetch mentors")
             }
 
-            override fun onCancelled(error: DatabaseError) {
-                Log.e("homePageActivity", "Failed to fetch mentors: ${error.message}")
-            }
-        })
+        }
     }
-
-
-
 
     private fun initMentors() {
         // Initialize top mentors
-
         // Setup RecyclerViews
         setupMentorsRecycler(topMentorsRecycler, topMentors)
         setupMentorsRecycler(recentMentorsRecycler, recentMentors)

@@ -94,6 +94,8 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer-dash:1.3.0")
     implementation("androidx.media3:media3-ui:1.3.0")
     implementation ("com.github.chrisbanes:PhotoView:2.0.0")
+    //import volley
+    implementation("com.android.volley:volley:1.2.1")
 
 
 

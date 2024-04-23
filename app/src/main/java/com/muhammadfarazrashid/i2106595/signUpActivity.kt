@@ -22,8 +22,10 @@ import com.google.firebase.database.ValueEventListener
 import com.google.firebase.messaging.FirebaseMessaging
 import com.muhammadfarazrashid.i2106595.dataclasses.FirebaseManager
 import com.muhammadfarazrashid.i2106595.dataclasses.User
+import com.muhammadfarazrashid.i2106595.managers.WebserviceHelper
 import java.util.Collections
 import java.util.Locale
+import java.util.UUID
 
 
 class signUpActivity : AppCompatActivity() {
@@ -252,72 +254,62 @@ class signUpActivity : AppCompatActivity() {
             return
         }
 
+        completion(true)
+
         // Check email availability
-        checkEmailAvailability(user.email) { isEmailAvailable ->
-            if (!isEmailAvailable) {
-                email.error = "Email is already in use"
-                email.requestFocus()
-                completion(false)
-                return@checkEmailAvailability
-            }
 
-            // Check phone number availability
-            checkPhoneAvailability(user.phone) { isPhoneAvailable ->
-                if (!isPhoneAvailable) {
-                    phone.error = "Phone number is already in use"
-                    phone.requestFocus()
-                    completion(false)
-                    return@checkPhoneAvailability
-                }
-
-                // If both email and phone are available, continue
-                completion(true)
-            }
-        }
+//        checkEmailAvailability(user.email) { isEmailAvailable ->
+//            if (!isEmailAvailable) {
+//                email.error = "Email is already in use"
+//                email.requestFocus()
+//                completion(false)
+//                return@checkEmailAvailability
+//            }
+//
+//            // Check phone number availability
+//            checkPhoneAvailability(user.phone) { isPhoneAvailable ->
+//                if (!isPhoneAvailable) {
+//                    phone.error = "Phone number is already in use"
+//                    phone.requestFocus()
+//                    completion(false)
+//                    return@checkPhoneAvailability
+//                }
+//
+//                // If both email and phone are available, continue
+//                completion(true)
+//            }
+//        }
     }
 
     private fun saveUserAuthentication(user:User)
     {
-        mAuth.createUserWithEmailAndPassword(user.email, user.password)
-            .addOnCompleteListener(this) { task ->
-                if (task.isSuccessful) {
-                    val user1 = mAuth.currentUser
-                    UserManager.setCurrentUser(user)
-                    FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-                        if (!task.isSuccessful) {
-                            return@addOnCompleteListener
-                        }
-
-                        // Get new FCM registration token
-                        val token = task.result
-
-                        // Log and toast
-                        val msg = token
-                        Log.d("MyToken", msg)
-                        FirebaseManager.addFcmTokenToUser(UserManager.getCurrentUser()?.id.toString(), "users", token)
-                        UserManager.saveUserLoggedInSP(true, getSharedPreferences("USER_LOGIN", MODE_PRIVATE))
-                        UserManager.saveUserEmailSP(user.email, getSharedPreferences("USER_LOGIN", MODE_PRIVATE))
-                        UserManager.getCurrentUser()?.fcmToken = token.toString()
-                        navigateToProfile()
-                    }
-
-
-                } else {
-                    Log.e(TAG, "Error creating user: ${task.exception?.message}")
-                }
+        UserManager.setCurrentUser(user)
+        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            if (!task.isSuccessful) {
+                return@addOnCompleteListener
             }
+
+            val token = task.result
+
+            // Log and toast
+            val msg = token
+            Log.d("MyToken", msg)
+            val webserviceHelper = WebserviceHelper(this)
+            webserviceHelper.addFCMTokenToUser(UserManager.getCurrentUser()?.id.toString(), token)
+           // UserManager.saveUserLoggedInSP(true, getSharedPreferences("USER_LOGIN", MODE_PRIVATE))
+           // UserManager.saveUserEmailSP(user.email, getSharedPreferences("USER_LOGIN", MODE_PRIVATE))
+            UserManager.getCurrentUser()?.fcmToken = token.toString()
+
+        }
 
     }
 
+
     private fun signUp() {
-
-
-        val database = FirebaseDatabase.getInstance()
-        val myRef = database.getReference("users")
-        val userId = myRef.push().key
+        val webserviceHelper = WebserviceHelper(this)
 
         val user = User(
-            id = userId.toString(),
+            id = UUID.randomUUID().toString(),
             name = name.text.toString(),
             email = email.text.toString(),
             country = userCountrySpinner.selectedItem.toString(),
@@ -326,25 +318,17 @@ class signUpActivity : AppCompatActivity() {
             phone = phone.text.toString()
         )
 
+        Log.d("Sign Up Activity", "User data: $user")
+
         verifyUser(user) { isValid ->
             if (isValid) {
-                myRef.child(userId.toString()).setValue(user)
-                    .addOnSuccessListener {
-                        Log.d(TAG, "User data saved successfully")
-                        saveUserAuthentication(user)
-
-                    }
-                    .addOnFailureListener { e ->
-                        Log.e(TAG, "Error saving user data: ${e.message}")
-
-                    }
+                Log.d("Sign Up Activity", "User data is valid")
+                webserviceHelper.saveUserToWebService(user)
+                saveUserAuthentication(user)
             } else {
                 Log.e(TAG, "User data is not valid")
-
             }
         }
-
-
     }
 
     private fun navigateToLogin() {

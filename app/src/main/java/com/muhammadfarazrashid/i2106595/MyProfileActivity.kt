@@ -6,9 +6,11 @@ import android.content.ContentValues
 import android.content.ContentValues.TAG
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
+import android.util.Base64
 import android.util.Log
 import android.view.View
 import android.widget.Button
@@ -30,10 +32,12 @@ import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageReference
 import com.muhammadfarazrashid.i2106595.dataclasses.User
+import com.muhammadfarazrashid.i2106595.managers.WebserviceHelper
 import com.squareup.picasso.Callback
 import com.squareup.picasso.MemoryPolicy
 import com.squareup.picasso.NetworkPolicy
 import com.squareup.picasso.Picasso
+import java.io.ByteArrayOutputStream
 import java.io.IOException
 
 
@@ -51,9 +55,9 @@ class MyProfileActivity : AppCompatActivity() {
     private lateinit var editProfilePicture: ImageView
     private lateinit var editProfileBanner: ImageView
     private var selectedImageRequestCode: Int = 0
-    private val storageReference: StorageReference = FirebaseStorage.getInstance().reference
     private var isImageSelectionInProgress = false
     private lateinit var logoutButton:ImageView
+    private var selectedImage: String? = null // Variable to store base64 encoded image
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,7 +68,7 @@ class MyProfileActivity : AppCompatActivity() {
         initReviewRecyclerView()
         initViews()
         fetchReviewsData()
-        loadUserInformation()
+        loadUserInformationWithoutFirebase()
         fetchUserFavorites()
         initBottomNavigation()
         setOnClickListeners()
@@ -181,23 +185,23 @@ class MyProfileActivity : AppCompatActivity() {
     }
 
     private fun fetchUserFavorites() {
-        val userId = FirebaseAuth.getInstance().currentUser!!.uid
-        val favoritesRef = FirebaseDatabase.getInstance().getReference("users").child(userId).child("favorites")
-        favoritesRef.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                val favoriteMentorIds = mutableListOf<String>()
-                for (mentorSnapshot in snapshot.children) {
-                    val mentorId = mentorSnapshot.key
-                    mentorId?.let { favoriteMentorIds.add(it) }
-                }
-                // After fetching favorite mentor IDs, fetch mentor objects
-                fetchMentors(favoriteMentorIds)
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-                Log.e(MotionEffect.TAG, "Failed to fetch user favorites: " + error.message)
-            }
-        })
+//        val userId = FirebaseAuth.getInstance().currentUser!!.uid
+//        val favoritesRef = FirebaseDatabase.getInstance().getReference("users").child(userId).child("favorites")
+//        favoritesRef.addListenerForSingleValueEvent(object : ValueEventListener {
+//            override fun onDataChange(snapshot: DataSnapshot) {
+//                val favoriteMentorIds = mutableListOf<String>()
+//                for (mentorSnapshot in snapshot.children) {
+//                    val mentorId = mentorSnapshot.key
+//                    mentorId?.let { favoriteMentorIds.add(it) }
+//                }
+//                // After fetching favorite mentor IDs, fetch mentor objects
+//                fetchMentors(favoriteMentorIds)
+//            }
+//
+//            override fun onCancelled(error: DatabaseError) {
+//                Log.e(MotionEffect.TAG, "Failed to fetch user favorites: " + error.message)
+//            }
+//        })
     }
 
     private fun fetchMentors(favoriteMentorIds: List<String>) {
@@ -239,16 +243,10 @@ class MyProfileActivity : AppCompatActivity() {
         topMentorsRecycler.adapter = topMentorsAdapter
     }
 
-    //when user comes back from editprofile page, reload the user information
+
     override fun onResume() {
         super.onResume()
-        if (!isImageSelectionInProgress) {
-            val userEmail = mAuth.currentUser?.email.toString()
-            UserManager.fetchAndSetCurrentUser(userEmail) {
-                loadUserInformationWithoutFirebase()
-            }
-        }
-        isImageSelectionInProgress = false // Reset the flag
+        loadUserInformationWithoutFirebase()
     }
 
 
@@ -271,122 +269,128 @@ class MyProfileActivity : AppCompatActivity() {
         }
     }
 
-    private fun loadUserInformation() {
-        val currentUser = UserManager.getCurrentUser()
-        if (currentUser != null) {
+//    private fun loadUserInformation() {
+//        val currentUser = UserManager.getCurrentUser()
+//        if (currentUser != null) {
+//
+//            Log.d(ContentValues.TAG, "loadUserInformation: ${currentUser.id}")
+//            name.setText(currentUser.name)
+//            city.setText(currentUser.city)
+//            Log.d("LoadUserInformation", "Profile Picture URL: ${currentUser.profilePictureUrl}")
+//            if (currentUser.profilePictureUrl.isNotEmpty())
+//                retrieveImageFromFirebaseStorage(this,"profile_picture", profilePicture)
+//            if(currentUser.bannerImageUrl.isNotEmpty())
+//                Picasso.get().load(currentUser.bannerImageUrl).into(banner)
+//
+//
+//        }
+//    }
 
-            Log.d(ContentValues.TAG, "loadUserInformation: ${currentUser.id}")
-            name.setText(currentUser.name)
-            city.setText(currentUser.city)
-            Log.d("LoadUserInformation", "Profile Picture URL: ${currentUser.profilePictureUrl}")
-            if (currentUser.profilePictureUrl.isNotEmpty())
-                retrieveImageFromFirebaseStorage(this,"profile_picture", profilePicture)
-            if(currentUser.bannerImageUrl.isNotEmpty())
-                Picasso.get().load(currentUser.bannerImageUrl).into(banner)
+//    private fun retrieveImageFromFirebaseStorage(context: Context, imageType: String, imageView: ImageView) {
+//        val currentUserUid = FirebaseAuth.getInstance().currentUser?.uid
+//        if (currentUserUid != null) {
+//            // Define the reference to the image in Firebase Storage
+//            val imageRef = storageReference.child("profile_images").child("$currentUserUid/$imageType.jpg")
+//
+//            // Get the download URL of the image
+//            imageRef.downloadUrl.addOnSuccessListener { uri ->
+//                // Log the download URL for debugging
+//                Log.d("RetrieveImage", "Download URL: $uri")
+//
+//                // Check if the image is loaded from cache or fetched from network
+//                val startTime = System.currentTimeMillis()
+//                Picasso.get().load(uri)
+//                    .memoryPolicy(MemoryPolicy.NO_CACHE)
+//                    .networkPolicy(NetworkPolicy.OFFLINE)
+//                    .into(imageView, object : Callback {
+//                        override fun onSuccess() {
+//                            val endTime = System.currentTimeMillis()
+//                            val duration = endTime - startTime
+//                            Log.d("RetrieveImage", "Image loaded from network in $duration ms")
+//                        }
+//
+//                        override fun onError(e: Exception?) {
+//                            Picasso.get().load(uri).into(imageView)
+//                        }
+//                    })
+//            }.addOnFailureListener { e ->
+//                // Handle any errors that occur during download
+//                Log.e("RetrieveImage", "Failed to retrieve image: $e")
+//            }
+//        }
+//    }
 
-
+    private fun encodeImage(bitmap: Bitmap?): String? {
+        bitmap?.let {
+            val byteArrayOutputStream = ByteArrayOutputStream()
+            it.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream)
+            val encodedImage = Base64.encodeToString(byteArrayOutputStream.toByteArray(), Base64.DEFAULT)
+            return encodedImage
         }
+        return null
     }
 
-    private fun retrieveImageFromFirebaseStorage(context: Context, imageType: String, imageView: ImageView) {
-        val currentUserUid = FirebaseAuth.getInstance().currentUser?.uid
-        if (currentUserUid != null) {
-            // Define the reference to the image in Firebase Storage
-            val imageRef = storageReference.child("profile_images").child("$currentUserUid/$imageType.jpg")
 
-            // Get the download URL of the image
-            imageRef.downloadUrl.addOnSuccessListener { uri ->
-                // Log the download URL for debugging
-                Log.d("RetrieveImage", "Download URL: $uri")
-
-                // Check if the image is loaded from cache or fetched from network
-                val startTime = System.currentTimeMillis()
-                Picasso.get().load(uri)
-                    .memoryPolicy(MemoryPolicy.NO_CACHE)
-                    .networkPolicy(NetworkPolicy.OFFLINE)
-                    .into(imageView, object : Callback {
-                        override fun onSuccess() {
-                            val endTime = System.currentTimeMillis()
-                            val duration = endTime - startTime
-                            Log.d("RetrieveImage", "Image loaded from network in $duration ms")
-                        }
-
-                        override fun onError(e: Exception?) {
-                            Picasso.get().load(uri).into(imageView)
-                        }
-                    })
-            }.addOnFailureListener { e ->
-                // Handle any errors that occur during download
-                Log.e("RetrieveImage", "Failed to retrieve image: $e")
-            }
-        }
-    }
-
-
-
-
-
-
-    private fun uploadImageToFirebaseStorage(imageUri: Uri, imageType: String, selectedImageUri: Uri) {
-        val currentUserUid = FirebaseAuth.getInstance().currentUser?.uid
-        if (currentUserUid != null) {
-            // Define path for the image in Firebase Storage
-            val filePath =
-                storageReference.child("profile_images").child("$currentUserUid/$imageType.jpg")
-
-            // Upload image to Firebase Storage
-            filePath.putFile(imageUri)
-                .addOnSuccessListener { taskSnapshot ->
-                    // Image uploaded successfully, get the download URL
-                    filePath.downloadUrl.addOnSuccessListener { uri ->
-                        // Save the download URL to Firebase Realtime Database or Firestore
-                        saveImageUrlToDatabase(uri.toString(), imageType, selectedImageUri)
-                        UserManager.setUserUrl(uri.toString())
-                    }
-                }
-                .addOnFailureListener { e ->
-                    // Image upload failed, handle the error
-                    Log.e("UploadImage", "Failed to upload image: $e")
-                    Snackbar.make(
-                        findViewById(android.R.id.content),
-                        "Failed to upload image",
-                        Snackbar.LENGTH_SHORT
-                    ).show()
-                }
-        }
-    }
-
-    private fun saveImageUrlToDatabase(imageUrl: String, imageType: String, selectedImageUri: Uri) {
-        // Save the image URL to Firebase Realtime Database or Firestore under the user's profile
-        // For example, if you're using Realtime Database:
-        val currentUserUid = UserManager.getCurrentUser()?.id
-        if (currentUserUid != null) {
-            val databaseReference = FirebaseDatabase.getInstance().getReference("users").child(currentUserUid)
-            val imageField = if (imageType == "profile_picture") "profilePictureUrl" else "bannerImageUrl"
-            databaseReference.child(imageField).setValue(imageUrl)
-                .addOnSuccessListener {
-                    Snackbar.make(findViewById(android.R.id.content), "Image uploaded successfully", Snackbar.LENGTH_SHORT).show()
-
-                    // Image URL saved successfully, no need to load the image from database
-                    when (imageType) {
-                        "profile_picture" -> {
-                            // Update the profile picture ImageView with the locally selected image
-                            profilePicture.setImageURI(selectedImageUri)
-                            Picasso.get().load(selectedImageUri).into(profilePicture)
-                        }
-                        "banner" -> {
-                            // Update the banner ImageView with the locally selected image
-                            banner.setImageURI(selectedImageUri)
-                            Picasso.get().load(selectedImageUri).into(banner)
-                        }
-                    }
-                }
-                .addOnFailureListener { e ->
-                    Log.e("SaveImageUrl", "Failed to save image URL to database: $e")
-                    Snackbar.make(findViewById(android.R.id.content), "Failed to save image URL", Snackbar.LENGTH_SHORT).show()
-                }
-        }
-    }
+//    private fun uploadImageToFirebaseStorage(imageUri: Uri, imageType: String, selectedImageUri: Uri) {
+//        val currentUserUid = FirebaseAuth.getInstance().currentUser?.uid
+//        if (currentUserUid != null) {
+//            // Define path for the image in Firebase Storage
+//            val filePath =
+//                storageReference.child("profile_images").child("$currentUserUid/$imageType.jpg")
+//
+//            // Upload image to Firebase Storage
+//            filePath.putFile(imageUri)
+//                .addOnSuccessListener { taskSnapshot ->
+//                    // Image uploaded successfully, get the download URL
+//                    filePath.downloadUrl.addOnSuccessListener { uri ->
+//                        // Save the download URL to Firebase Realtime Database or Firestore
+//                        saveImageUrlToDatabase(uri.toString(), imageType, selectedImageUri)
+//                        UserManager.setUserUrl(uri.toString())
+//                    }
+//                }
+//                .addOnFailureListener { e ->
+//                    // Image upload failed, handle the error
+//                    Log.e("UploadImage", "Failed to upload image: $e")
+//                    Snackbar.make(
+//                        findViewById(android.R.id.content),
+//                        "Failed to upload image",
+//                        Snackbar.LENGTH_SHORT
+//                    ).show()
+//                }
+//        }
+//    }
+//
+//    private fun saveImageUrlToDatabase(imageUrl: String, imageType: String, selectedImageUri: Uri) {
+//        // Save the image URL to Firebase Realtime Database or Firestore under the user's profile
+//        // For example, if you're using Realtime Database:
+//        val currentUserUid = UserManager.getCurrentUser()?.id
+//        if (currentUserUid != null) {
+//            val databaseReference = FirebaseDatabase.getInstance().getReference("users").child(currentUserUid)
+//            val imageField = if (imageType == "profile_picture") "profilePictureUrl" else "bannerImageUrl"
+//            databaseReference.child(imageField).setValue(imageUrl)
+//                .addOnSuccessListener {
+//                    Snackbar.make(findViewById(android.R.id.content), "Image uploaded successfully", Snackbar.LENGTH_SHORT).show()
+//
+//                    // Image URL saved successfully, no need to load the image from database
+//                    when (imageType) {
+//                        "profile_picture" -> {
+//                            // Update the profile picture ImageView with the locally selected image
+//                            profilePicture.setImageURI(selectedImageUri)
+//                            Picasso.get().load(selectedImageUri).into(profilePicture)
+//                        }
+//                        "banner" -> {
+//                            // Update the banner ImageView with the locally selected image
+//                            banner.setImageURI(selectedImageUri)
+//                            Picasso.get().load(selectedImageUri).into(banner)
+//                        }
+//                    }
+//                }
+//                .addOnFailureListener { e ->
+//                    Log.e("SaveImageUrl", "Failed to save image URL to database: $e")
+//                    Snackbar.make(findViewById(android.R.id.content), "Failed to save image URL", Snackbar.LENGTH_SHORT).show()
+//                }
+//        }
+//    }
 
 
     private val pickImageGalleryLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -395,16 +399,36 @@ class MyProfileActivity : AppCompatActivity() {
             try {
                 selectedImageUri?.let { uri ->
                     val bitmap = MediaStore.Images.Media.getBitmap(this.contentResolver, uri)
+                    selectedImage = encodeImage(bitmap)
                     // Set the selected image to the corresponding ImageView
                     when (selectedImageRequestCode) {
                         REQUEST_CODE_PROFILE_PICTURE -> {
 
-                            uploadImageToFirebaseStorage(uri, "profile_picture", selectedImageUri)
+                            val webserviceHelper = WebserviceHelper(this)
+                            selectedImage?.let {
+                                webserviceHelper.uploadProfilePicture(currentUser.id,
+                                    it
+                                )
+                                profilePicture.setImageURI(uri)
+                                Picasso.get().load(uri).into(profilePicture)
+                            }
                         }
                         REQUEST_CODE_BANNER -> {
 
-                            uploadImageToFirebaseStorage(uri, "banner", selectedImageUri)
+                            val webserviceHelper = WebserviceHelper(this)
+                            selectedImage?.let {
+                                webserviceHelper.uploadBannerImage(currentUser.id,
+                                    it
+                                )
+                                banner.setImageURI(uri)
+                                Picasso.get().load(uri).into(banner)
+                            }
+
+
                         }
+
+                        else -> {
+                            Snackbar.make(findViewById(android.R.id.content), "Invalid request code", Snackbar.LENGTH_SHORT).show()}
                     }
                 }
             } catch (e: IOException) {

@@ -4,11 +4,13 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ClipDescription
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.provider.MediaStore
+import android.util.Base64
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
@@ -26,6 +28,8 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageReference
+import com.muhammadfarazrashid.i2106595.managers.WebserviceHelper
+import java.io.ByteArrayOutputStream
 
 class AddAMentor : AppCompatActivity() {
 
@@ -42,6 +46,8 @@ class AddAMentor : AppCompatActivity() {
     private val database= FirebaseDatabase.getInstance()
     private val myRef=database.getReference("Mentors")
     private lateinit var selectedImageUri: Uri
+    private var bitmap: Bitmap? = null
+    private var selectedImage: String? = null // Variable to store base64 encoded image
 
 
 
@@ -103,6 +109,16 @@ class AddAMentor : AppCompatActivity() {
             }
 
         }
+    }
+
+    private fun encodeImage(bitmap: Bitmap?): String? {
+        bitmap?.let {
+            val byteArrayOutputStream = ByteArrayOutputStream()
+            it.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream)
+            val encodedImage = Base64.encodeToString(byteArrayOutputStream.toByteArray(), Base64.DEFAULT)
+            return encodedImage
+        }
+        return null
     }
 
     private fun setUpSpinners() {
@@ -183,68 +199,12 @@ class AddAMentor : AppCompatActivity() {
     }
 
 
-        private fun uploadMentorProfilePicture(imageUri: Uri, mentorId: String) {
 
-            // Define path for the image in Firebase Storage
-
-            val filePath = storageReference.child("mentor_profile_images").child("$mentorId.jpg")
-            Log.d("UploadImage", "Uploading image to: ${filePath.path}")
-    // Upload image to Firebase Storage
-            filePath.putFile(imageUri)
-                .addOnSuccessListener { taskSnapshot ->
-                    // Image uploaded successfully, get the download URL
-                    filePath.downloadUrl.addOnSuccessListener { uri ->
-                        // Save the download URL to Firebase Realtime Database or Firestore
-                        saveMentorProfilePictureUrlToDatabase(mentorId, uri.toString())
-                    }
-                }
-                .addOnFailureListener { e ->
-                    // Image upload failed, handle the error
-                    Log.e("UploadImage", "Failed to upload image: $e")
-                    Snackbar.make(
-                        findViewById(android.R.id.content),
-                        "Failed to upload image",
-                        Snackbar.LENGTH_SHORT
-                    ).show()
-                }
-
-    }
-
-    private fun sanitizeId(id: String): String {
-        var sanitizedId = id.replace(".", "a")
-            .replace("#", "a")
-            .replace("$", "a")
-            .replace("[", "a")
-            .replace("]", "a")
-
-        // Remove the dash if it exists at the beginning
-        if (sanitizedId.startsWith("-")) {
-            sanitizedId = sanitizedId.substring(1)
-        }
-
-        return sanitizedId
-    }
-
-
-
-    @SuppressLint("SuspiciousIndentation")
-    private fun saveMentorProfilePictureUrlToDatabase(mentorId: String, imageUrl: String) {
-        val databaseReference = FirebaseDatabase.getInstance().getReference("Mentors").child(mentorId)
-            databaseReference.child("profilePictureUrl").setValue(imageUrl)
-                .addOnSuccessListener {
-                    Snackbar.make(findViewById(android.R.id.content), "Profile picture uploaded successfully", Snackbar.LENGTH_SHORT).show()
-                    val intent = Intent(this, homePageActivity::class.java)
-                    startActivity(intent)
-                }
-                .addOnFailureListener { e ->
-                    Log.e("SaveImageUrl", "Failed to save profile picture URL to database: $e")
-                    Snackbar.make(findViewById(android.R.id.content), "Failed to save profile picture URL", Snackbar.LENGTH_SHORT).show()
-                }
-
-    }
 
     private val pickImageGalleryLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
+            bitmap = MediaStore.Images.Media.getBitmap(this.contentResolver, result.data?.data)
+            selectedImage = encodeImage(bitmap)
             selectedImageUri = result.data?.data ?: return@registerForActivityResult
 
         }
@@ -259,18 +219,10 @@ class AddAMentor : AppCompatActivity() {
     fun addAMentor() {
         if(!verifyData()) return
 
-        val mentor = Mentor(sanitizeId(mentorId), name.text.toString(), position.text.toString(), availabilitySpinner.selectedItem.toString(), sessionPrice.text.toString(), description.text.toString())
-        Log.d("sanitizedId", sanitizeId(mentorId))
-        val mentorId=sanitizeId(mentorId)
-        myRef.child(mentorId).setValue(mentor)
-            .addOnSuccessListener {
-                Log.d("AddAMentor", "Mentor added successfully")
-                uploadMentorProfilePicture(selectedImageUri, mentorId)
+        val mentor = Mentor((mentorId), name.text.toString(), position.text.toString(), availabilitySpinner.selectedItem.toString(), sessionPrice.text.toString(), description.text.toString())
+       val webserviceHelper = WebserviceHelper(this)
+        selectedImage?.let { webserviceHelper.addMentor(mentor, it) }
 
-            }
-            .addOnFailureListener {
-                Log.d("AddAMentor", "Mentor addition failed")
-            }
 
     }
 }

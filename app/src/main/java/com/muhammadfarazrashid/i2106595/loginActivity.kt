@@ -13,12 +13,13 @@ import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.messaging.FirebaseMessaging
 import com.muhammadfarazrashid.i2106595.dataclasses.FirebaseManager
+import com.muhammadfarazrashid.i2106595.managers.WebserviceHelper
 
 class loginActivity : AppCompatActivity() {
 
-    private  var mAuth : FirebaseAuth = FirebaseAuth.getInstance()
-    private lateinit var email:TextView
-    private lateinit var password:TextView
+    private var mAuth: FirebaseAuth = FirebaseAuth.getInstance()
+    private lateinit var email: TextView
+    private lateinit var password: TextView
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.login_page)
@@ -67,52 +68,55 @@ class loginActivity : AppCompatActivity() {
     }
 
     fun login() {
-        if(!verifyTextFields())
-        {
+        if (!verifyTextFields()) {
             return
         }
         val email: String = findViewById<TextView>(R.id.userEmail).text.toString()
         val password: String = findViewById<TextView>(R.id.userPassword).text.toString()
 
-        mAuth.signInWithEmailAndPassword(email, password)
-            .addOnCompleteListener(this) { task ->
-                if (task.isSuccessful) {
-                    val user = mAuth.currentUser
-                    val intent = Intent(this, homePageActivity::class.java)
-                    //call user managerclass and save it
-                    val userManager = UserManager.getInstance()
-                    UserManager.saveUserLoggedInSP(true, getSharedPreferences("USER_LOGIN", MODE_PRIVATE))
-                    UserManager.saveUserEmailSP(user?.email.toString(), getSharedPreferences("USER_LOGIN", MODE_PRIVATE))
+        val webserviceHelper = WebserviceHelper(this)
+        webserviceHelper.loginUser(email, password) { user ->
+            if (user != null) {
+                val intent = Intent(this, homePageActivity::class.java)
+                //call user managerclass and save it
+                val userManager = UserManager.getInstance()
+                userManager.setCurrentUser(user)
+//                UserManager.saveUserLoggedInSP(
+//                    true,
+//                    getSharedPreferences("USER_LOGIN", MODE_PRIVATE)
+//                )
+//                UserManager.saveUserEmailSP(email, getSharedPreferences("USER_LOGIN", MODE_PRIVATE))
 
-                    userManager.fetchAndSetCurrentUser(user?.email.toString())
-                    {
-                        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-                            if (!task.isSuccessful) {
-                                return@addOnCompleteListener
-                            }
-
-                            // Get new FCM registration token
-                            val token = task.result
-
-                            // Log and toast
-                            val msg = token
-                            Log.d("MyToken", msg)
-                            FirebaseManager.addFcmTokenToUser(UserManager.getCurrentUser()?.id.toString(), "users", token)
-                            UserManager.getCurrentUser()?.fcmToken = token.toString()
-                            startActivity(intent)
-                            finish()
-                        }
-
+                FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                    if (!task.isSuccessful) {
+                        return@addOnCompleteListener
                     }
-                } else {
 
-                    Log.w(TAG, "signInWithEmail:failure", task.exception)
-                    Toast.makeText(baseContext, "Authentication failed.",
-                    Toast.LENGTH_SHORT).show()
+                    // Get new FCM registration token
+                    val token = task.result
 
+                    // Log and toast
+                    val msg = token
+                    Log.d("MyToken", msg)
+                    webserviceHelper.addFCMTokenToUser(user.id, token)
+                    UserManager.getCurrentUser()?.fcmToken = token.toString()
+                   Toast.makeText(baseContext, "Token: ${user.password}", Toast.LENGTH_SHORT).show()
+                    startActivity(intent)
+                    finish()
+                }
+
+            }else {
+                    Log.w(TAG, "signInWithEmail:failure")
+                    Toast.makeText(
+                        baseContext, "Authentication failed.",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             }
-    }
+        }
+
+
 
 
 }
+
