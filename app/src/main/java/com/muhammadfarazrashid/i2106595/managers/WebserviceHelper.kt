@@ -10,6 +10,7 @@ import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 import com.muhammadfarazrashid.i2106595.Mentor
+import com.muhammadfarazrashid.i2106595.ReviewItem
 import com.muhammadfarazrashid.i2106595.Session
 import com.muhammadfarazrashid.i2106595.dataclasses.User
 import org.json.JSONArray
@@ -514,11 +515,90 @@ class WebserviceHelper(private val context: Context) {
         Volley.newRequestQueue(context).add(stringRequest)
     }
 
+    //write code to add review
 
+    fun addReview(userId: String, mentorId: String, rating: Float, review: String) {
+        val queue = Volley.newRequestQueue(context)
 
+        val url = BASE_URL + "add_review.php" // Replace with your server URL
 
+        val stringRequest = object: StringRequest(
+            Method.POST, url,
+            Response.Listener<String> { response ->
+                // Handle response
+                Log.d(TAG, "Response: $response")
+                Toast.makeText(context, "Review added successfully", Toast.LENGTH_SHORT).show()
+            },
+            Response.ErrorListener { error ->
+                // Handle error
+                Log.e(TAG, "Error adding review: ${error.message}")
+            }
+        ) {
+            override fun getParams(): Map<String, String> {
+                val params = HashMap<String, String>()
+                params["id"] = UUID.randomUUID().toString()
+                params["userId"] = userId
+                params["mentorId"] = mentorId
+                params["rating"] = rating.toString()
+                params["reviewText"] = review
+                return params
+            }
+        }
 
+        // Add the request to the RequestQueue.
+        queue.add(stringRequest)
+    }
 
+    //write code to get reviews
+
+    fun getReviews(userId: String, callback: (MutableList<ReviewItem>?) -> Unit){
+        val url = BASE_URL + "get_review.php"
+
+        val stringRequest = object : StringRequest(
+            Method.POST, url,
+            Response.Listener<String> { response ->
+                // Handle response
+                Log.d(TAG, "Response: $response")
+
+                try {
+                    val jsonObject = JSONObject(response)
+                    if (jsonObject.has("success") && jsonObject.getInt("success") == 1) {
+                        val reviewsArray = jsonObject.getJSONArray("reviews")
+                        val reviews = mutableListOf<ReviewItem>()
+                        for (i in 0 until reviewsArray.length()) {
+                            Log.d(TAG, "Review: $i")
+                            val reviewObject = reviewsArray.getJSONObject(i)
+                            val rating = reviewObject.getString("rating").toFloat()
+                            val reviewText = reviewObject.getString("reviewText")
+                            val mentorName = reviewObject.getString("name") // Fetch mentor's name
+                            val review = ReviewItem(mentorName, reviewText, rating) // Include mentor's name in ReviewItem
+                            reviews.add(review)
+                        }
+                        callback(reviews)
+                    } else {
+                        callback(null)
+                    }
+                } catch (e: JSONException) {
+                    Log.e(TAG, "JSON parsing error: ${e.message}")
+                    callback(null)
+                }
+            },
+            Response.ErrorListener { error ->
+                // Handle error
+                Log.e(TAG, "Error getting reviews: ${error.message}")
+                callback(null)
+            }
+        ) {
+            override fun getParams(): Map<String, String> {
+                val params = HashMap<String, String>()
+                params["userId"] = userId
+                return params
+            }
+        }
+
+        // Add the request to the RequestQueue.
+        Volley.newRequestQueue(context).add(stringRequest)
+    }
 
 
     interface FavouritesCallback {

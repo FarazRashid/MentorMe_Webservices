@@ -52,4 +52,9 @@ class ReviewItemAdapter extends RecyclerView.Adapter<ReviewViewHolder> {
         reviewItems.addAll(reviewList);
         notifyDataSetChanged();
     }
+
+    public void updateReviews(@NotNull List<ReviewItem> reviews) {
+        reviewItems = reviews;
+        notifyDataSetChanged();
+    }
 }

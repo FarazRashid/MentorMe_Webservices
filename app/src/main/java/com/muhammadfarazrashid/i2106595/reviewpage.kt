@@ -11,6 +11,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
+import com.muhammadfarazrashid.i2106595.managers.WebserviceHelper
 import com.squareup.picasso.Picasso
 import org.w3c.dom.Text
 
@@ -213,70 +214,18 @@ class reviewpage: AppCompatActivity() {
 
     fun submitAndUploadFeedback(rating: Float, reviewText: String) {
         if (::currentMentor.isInitialized) {
-            // Fetch current mentor's data from the database
-            if(currentMentor.id.startsWith("-"))
-            {
-                currentMentor.id = currentMentor.id.substring(1)
-            }
+            val webserviceHelper = WebserviceHelper(this)
+            val userId = UserManager.getInstance().getCurrentUser()?.id
+            val mentorId = currentMentor.id
 
-            val mentorRef = database.getReference("Mentors").child(currentMentor.id ?: "")
+            if (userId != null && mentorId != null) {
+                webserviceHelper.addReview(userId, mentorId, rating, reviewText)
 
-            // Fetch current rating and number of ratings
-            mentorRef.child("currentRating").get().addOnSuccessListener { currentRatingSnapshot ->
-                val currentRating = currentRatingSnapshot.getValue(Float::class.java)
-                Log.d("submitFeedback", "Current rating: $currentRating")
-
-                mentorRef.child("numberOfRatings").get().addOnSuccessListener { numberOfRatingsSnapshot ->
-                    val numberOfRatings = numberOfRatingsSnapshot.getValue(Int::class.java)
-                    Log.d("submitFeedback", "Number of ratings: $numberOfRatings")
-
-                    // Calculate new rating
-                    val newRating = if (currentRating != null && numberOfRatings != null && numberOfRatings > 0) {
-                        ((numberOfRatings * currentRating) + rating) / (numberOfRatings + 1)
-                    } else {
-                        rating
-                    }
-                    Log.d("submitFeedback", "New rating: $newRating")
-
-                    // Update mentor's data in the database
-                    mentorRef.updateChildren(
-                        mapOf(
-                            "currentRating" to newRating,
-                            "numberOfRatings" to (numberOfRatings ?: 0) + 1
-                        )
-                    ).addOnSuccessListener {
-                        Log.d("submitFeedback", "Mentor data updated successfully.")
-
-                        // Upload review to mentor
-                        mentorRef.child("reviews").push().setValue(mentorReview(rating, reviewText))
-                            .addOnSuccessListener {
-                                Log.d("submitFeedback", "Review uploaded to mentor.")
-                            }.addOnFailureListener {
-                                Log.e("submitFeedback", "Failed to upload review to mentor: ${it.message}")
-                            }
-
-                        // Upload review to user if user is available
-                        UserManager.getInstance().getCurrentUser()?.let { user ->
-                            database.getReference("users").child(user.id).child("reviews").push()
-                                .setValue(userReview(currentMentor.id, currentMentor.name, rating, reviewText))
-                                .addOnSuccessListener {
-                                    Log.d("submitFeedback", "Review uploaded to user.")
-                                }.addOnFailureListener {
-                                    Log.e("submitFeedback", "Failed to upload review to user: ${it.message}")
-                                }
-                        }
-
-                        // Navigate to the home page
-                        val intent = Intent(this, homePageActivity::class.java)
-                        startActivity(intent)
-                    }.addOnFailureListener {
-                        Log.e("submitFeedback", "Failed to update mentor data: ${it.message}")
-                    }
-                }.addOnFailureListener {
-                    Log.e("submitFeedback", "Failed to get number of ratings: ${it.message}")
-                }
-            }.addOnFailureListener {
-                Log.e("submitFeedback", "Failed to get current rating: ${it.message}")
+                // Navigate to the home page
+                val intent = Intent(this, homePageActivity::class.java)
+                startActivity(intent)
+            } else {
+                Log.e("submitFeedback", "User ID or Mentor ID is null.")
             }
         } else {
             Log.e("submitFeedback", "Current mentor is not initialized.")

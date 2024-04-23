@@ -87,29 +87,15 @@ class MyProfileActivity : AppCompatActivity() {
 
     private fun fetchReviewsData() {
         val userId = currentUser.id
-        val reviewsRef = FirebaseDatabase.getInstance().getReference("users").child(userId).child("reviews")
+        val webserviceHelper = WebserviceHelper(this)
 
-        reviewsRef.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                val reviewList = mutableListOf<ReviewItem>()
-                for (reviewSnapshot in snapshot.children) {
-                    val mentorName = reviewSnapshot.child("mentorName").getValue(String::class.java)
-                    val rating = reviewSnapshot.child("rating").getValue(Float::class.java)
-                    val comment = reviewSnapshot.child("reviewText").getValue(String::class.java)
-                    rating?.let { r ->
-                        comment?.let { c ->
-                            val review = ReviewItem(mentorName, c, r)
-                            reviewList.add(review)
-                        }
-                    }
-                }
-                    initReviewRecyclerView(reviewList)
+        webserviceHelper.getReviews(userId) { reviews ->
+            if (reviews != null) {
+                reviewAdapter.updateReviews(reviews)
+            } else {
+                Log.e("MyProfileActivity", "Error getting reviews")
             }
-
-            override fun onCancelled(error: DatabaseError) {
-                Log.e("FetchReviews", "Failed to fetch reviews: ${error.message}")
-            }
-        })
+        }
     }
 
 
