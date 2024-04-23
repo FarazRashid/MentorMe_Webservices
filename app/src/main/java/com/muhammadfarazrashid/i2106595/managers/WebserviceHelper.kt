@@ -11,6 +11,7 @@ import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 import com.muhammadfarazrashid.i2106595.Mentor
 import com.muhammadfarazrashid.i2106595.dataclasses.User
+import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import java.util.UUID
@@ -18,7 +19,7 @@ import java.util.UUID
 //using volley
 class WebserviceHelper(private val context: Context) {
 
-    private val BASE_URL = "http://172.16.140.33/"
+    private val BASE_URL = "http://192.168.18.54/"
 
     fun saveUserToWebService(user: User) {
         val queue = Volley.newRequestQueue(context)
@@ -325,8 +326,115 @@ class WebserviceHelper(private val context: Context) {
     }
 
 
+    fun addToFavourite(userId: String, mentorId: String) {
+        val queue = Volley.newRequestQueue(context)
+
+        val url = BASE_URL + "add_to_favourites.php" // Replace with your server URL
+
+        val stringRequest = object: StringRequest(
+            Method.POST, url,
+            Response.Listener<String> { response ->
+                // Handle response
+                Log.d(TAG, "Response: $response")
+                Toast.makeText(context, "Mentor added to favourites", Toast.LENGTH_SHORT).show()
+            },
+            Response.ErrorListener { error ->
+                // Handle error
+                Log.e(TAG, "Error adding mentor to favourites: ${error.message}")
+            }
+        ) {
+            override fun getParams(): Map<String, String> {
+                val params = HashMap<String, String>()
+                params["id"]= UUID.randomUUID().toString()
+                params["userId"] = userId
+                params["mentorId"] = mentorId
+                return params
+            }
+        }
+
+        // Add the request to the RequestQueue.
+        queue.add(stringRequest)
+    }
+
+    //remove from favourites
+
+    fun removeFromFavourite(userId: String, mentorId: String) {
+        val queue = Volley.newRequestQueue(context)
+
+        val url = BASE_URL + "remove_from_favourites.php" // Replace with your server URL
+
+        val stringRequest = object: StringRequest(
+            Method.POST, url,
+            Response.Listener<String> { response ->
+                // Handle response
+                Log.d(TAG, "Response: $response")
+                Toast.makeText(context, "Mentor removed from favourites", Toast.LENGTH_SHORT).show()
+            },
+            Response.ErrorListener { error ->
+                // Handle error
+                Log.e(TAG, "Error removing mentor from favourites: ${error.message}")
+            }
+        ) {
+            override fun getParams(): Map<String, String> {
+                val params = HashMap<String, String>()
+                params["userId"] = userId
+                params["mentorId"] = mentorId
+                return params
+            }
+        }
+
+        // Add the request to the RequestQueue.
+        queue.add(stringRequest)
+    }
+
+    // get favourites, we will pass userId as parameter and we will get a list of mentorIds
+
+    fun getFavourites(userId: String, callback: FavouritesCallback) {
+        val url = BASE_URL + "get_favourite_mentors.php"
+
+        val stringRequest = object : StringRequest(
+            Method.POST, url,
+            Response.Listener<String> { response ->
+                // Handle response
+                Log.d(TAG, "Response: $response")
+
+                try {
+                    val jsonArray = JSONArray(response)
+                    val mentorIds = mutableListOf<String>()
+                    for (i in 0 until jsonArray.length()) {
+                        val jsonObject = jsonArray.getJSONObject(i)
+                        val mentorId = jsonObject.getString("mentorId")
+                        mentorIds.add(mentorId)
+                    }
+                    callback.onSuccess(mentorIds)
+                } catch (e: JSONException) {
+                    Log.e(TAG, "JSON parsing error: ${e.message}")
+                    callback.onError(null)
+                }
+            },
+            Response.ErrorListener { error ->
+                // Handle error
+                Log.e(TAG, "Error getting favourites: ${error.message}")
+                callback.onError(null)
+            }
+        ) {
+            override fun getParams(): Map<String, String> {
+                val params = HashMap<String, String>()
+                params["userId"] = userId
+                return params
+            }
+        }
+
+        // Add the request to the RequestQueue.
+        Volley.newRequestQueue(context).add(stringRequest)
+    }
 
 
+
+    interface FavouritesCallback {
+        fun onSuccess(favourites: List<String?>?)
+        fun onError(errorMessage: String?)
+    }
 
 
 }

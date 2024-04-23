@@ -26,6 +26,7 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 import com.muhammadfarazrashid.i2106595.dataclasses.NotificationsManager;
+import com.muhammadfarazrashid.i2106595.managers.WebserviceHelper;
 import com.squareup.picasso.Picasso;
 
 import java.util.List;
@@ -125,41 +126,37 @@ public class MentorCardAdapter extends RecyclerView.Adapter<MentorCardAdapter.Vi
     }
 
     private void fetchUserFavorites() {
+        WebserviceHelper webserviceHelper = new WebserviceHelper(inflater.getContext());
+        // Get user ID
+        String userId = UserManager.getInstance().getCurrentUser().getId();
 
+        // Call getFavourites method
+        webserviceHelper.getFavourites(userId, new WebserviceHelper.FavouritesCallback() {
+            @Override
+            public void onSuccess(List<String> favourites) {
+                // Iterate through mentors in data list
+                for (Mentor mentor : data) {
+                    // Check if mentor ID is in the favourites list
+                    if (favourites.contains(mentor.getId())) {
+                        mentor.setFavorite(true); // Set mentor as favorite
+                    } else {
+                        mentor.setFavorite(false); // Set mentor as not favorite
+                    }
+                }
+                // Notify adapter that data has changed
+                notifyDataSetChanged();
+            }
 
-        for (Mentor mentor : data) {
-            mentor.setFavorite(Math.random() < 0.5);
-        }
-
-
-//        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-//        DatabaseReference favoritesRef = FirebaseDatabase.getInstance().getReference("users").child(userId).child("favorites");
-//        favoritesRef.addListenerForSingleValueEvent(new ValueEventListener() {
-//            @Override
-//            public void onDataChange(@NonNull DataSnapshot snapshot) {
-//                // Iterate through the favorites and update mentors accordingly
-//                for (DataSnapshot mentorSnapshot : snapshot.getChildren()) {
-//                    String mentorId = mentorSnapshot.getKey();
-//                    if (mentorId != null) { // Add null check
-//                        for (Mentor mentor : data) {
-//                            if (mentorId.equals(mentor.getId())) { // Check for null mentor ID
-//                                mentor.setFavorite(true);
-//                                break;
-//                            }
-//                        }
-//                    }
-//                }
-//                notifyDataSetChanged(); // Update the RecyclerView
-//            }
-//
-//            @Override
-//            public void onCancelled(@NonNull DatabaseError error) {
-//                Log.e(TAG, "Failed to fetch user favorites: " + error.getMessage());
-//            }
-//        });
+            @Override
+            public void onError(String errorMessage) {
+                // Handle error
+                Log.e(TAG, "Error fetching user favourites: " + errorMessage);
+            }
+        });
     }
 
-   public void updateList(List<Mentor>mentors)
+
+    public void updateList(List<Mentor>mentors)
    {
          data.clear();
          data.addAll(mentors);
@@ -168,26 +165,37 @@ public class MentorCardAdapter extends RecyclerView.Adapter<MentorCardAdapter.Vi
 
 
     private void addFavoriteMentor(String mentorId) {
-        // Get current user ID
-        String userId = Objects.requireNonNull(auth.getCurrentUser()).getUid();
-        // Add mentor to favorites
-       DatabaseReference  favoritesRef = database.getReference("users").child(userId).child("favorites").child(mentorId);
-        favoritesRef.setValue(true)
-                .addOnSuccessListener((OnSuccessListener<Void>) aVoid -> Log.d(TAG, "Favorite mentor added: " + mentorId))
-                .addOnFailureListener((OnFailureListener) e -> Log.e(TAG, "Failed to add favorite mentor: " + e.getMessage()));
+//        // Get current user ID
+//        String userId = Objects.requireNonNull(auth.getCurrentUser()).getUid();
+//        // Add mentor to favorites
+//       DatabaseReference  favoritesRef = database.getReference("users").child(userId).child("favorites").child(mentorId);
+//        favoritesRef.setValue(true)
+//                .addOnSuccessListener((OnSuccessListener<Void>) aVoid -> Log.d(TAG, "Favorite mentor added: " + mentorId))
+//                .addOnFailureListener((OnFailureListener) e -> Log.e(TAG, "Failed to add favorite mentor: " + e.getMessage()));
         //get mentor name using chat adapater
+
+        //utilize webservice here
+
+        WebserviceHelper webserviceHelper = new WebserviceHelper(this.inflater.getContext());
+        webserviceHelper.addToFavourite(UserManager.getInstance().getCurrentUser().getId(), mentorId);
 
     }
 
     // Remove favorite mentor for the current user
     private void removeFavoriteMentor(String mentorId) {
-        // Get current user ID
-        String userId = Objects.requireNonNull(auth.getCurrentUser()).getUid();
-        // Remove mentor from favorites
-        DatabaseReference favoritesRef = database.getReference("users").child(userId).child("favorites").child(mentorId);
-        favoritesRef.removeValue()
-                .addOnSuccessListener(aVoid -> Log.d(TAG, "Favorite mentor removed: " + mentorId))
-                .addOnFailureListener(e -> Log.e(TAG, "Failed to remove favorite mentor: " + e.getMessage()));
+//        // Get current user ID
+//        String userId = Objects.requireNonNull(auth.getCurrentUser()).getUid();
+//        // Remove mentor from favorites
+//        DatabaseReference favoritesRef = database.getReference("users").child(userId).child("favorites").child(mentorId);
+//        favoritesRef.removeValue()
+//                .addOnSuccessListener(aVoid -> Log.d(TAG, "Favorite mentor removed: " + mentorId))
+//                .addOnFailureListener(e -> Log.e(TAG, "Failed to remove favorite mentor: " + e.getMessage()));
+
+        //utilize webservice here
+
+        WebserviceHelper webserviceHelper = new WebserviceHelper(this.inflater.getContext());
+        webserviceHelper.removeFromFavourite(UserManager.getInstance().getCurrentUser().getId(), mentorId);
+
     }
 
 

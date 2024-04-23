@@ -185,49 +185,37 @@ class MyProfileActivity : AppCompatActivity() {
     }
 
     private fun fetchUserFavorites() {
-//        val userId = FirebaseAuth.getInstance().currentUser!!.uid
-//        val favoritesRef = FirebaseDatabase.getInstance().getReference("users").child(userId).child("favorites")
-//        favoritesRef.addListenerForSingleValueEvent(object : ValueEventListener {
-//            override fun onDataChange(snapshot: DataSnapshot) {
-//                val favoriteMentorIds = mutableListOf<String>()
-//                for (mentorSnapshot in snapshot.children) {
-//                    val mentorId = mentorSnapshot.key
-//                    mentorId?.let { favoriteMentorIds.add(it) }
-//                }
-//                // After fetching favorite mentor IDs, fetch mentor objects
-//                fetchMentors(favoriteMentorIds)
-//            }
-//
-//            override fun onCancelled(error: DatabaseError) {
-//                Log.e(MotionEffect.TAG, "Failed to fetch user favorites: " + error.message)
-//            }
-//        })
+        val webserviceHelper = WebserviceHelper(this)
+        val userId = UserManager.getInstance().getCurrentUser()?.id ?: ""
+
+        webserviceHelper.getFavourites(userId, object : WebserviceHelper.FavouritesCallback {
+
+            override fun onSuccess(favourites: List<String?>?) {
+                if (favourites != null) {
+                    fetchMentors(favourites.filterNotNull())
+                }
+            }
+
+            override fun onError(errorMessage: String?) {
+                Log.e("FetchFavorites", "Failed to fetch favorites: $errorMessage")
+            }
+        })
     }
 
     private fun fetchMentors(favoriteMentorIds: List<String>) {
-        val mentorsRef = FirebaseDatabase.getInstance().getReference("Mentors")
-        mentorsRef.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                val mentors = mutableListOf<Mentor>()
-                for (mentorSnapshot in snapshot.children) {
-                    val mentor = mentorSnapshot.getValue(Mentor::class.java)
-                    mentor?.let {
-                        it.id = mentorSnapshot.key // Set mentor ID
-                        if (favoriteMentorIds.contains(it.id)) {
-                            it.isFavorite = true
-                            mentors.add(it)
-                        }
+        val webserviceHelper = WebserviceHelper(this)
+        webserviceHelper.getMentors { mentors ->
+            if (mentors != null) {
+                val favoriteMentors = mentors.filter { mentor -> favoriteMentorIds.contains(mentor.id) }
+                initTopMentorsRecyclerView(favoriteMentors)
 
-                    }
-                }
-                // Initialize the RecyclerView with fetched mentors
-                initTopMentorsRecyclerView(mentors)
+
+            }
+            else{
+                Log.d("homePageActivity", "Failed to fetch mentors")
             }
 
-            override fun onCancelled(error: DatabaseError) {
-                Log.e(MotionEffect.TAG, "Failed to fetch mentors: " + error.message)
-            }
-        })
+        }
     }
 
 
