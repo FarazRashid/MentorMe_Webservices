@@ -18,6 +18,7 @@ import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.muhammadfarazrashid.i2106595.dataclasses.FirebaseManager
 import com.muhammadfarazrashid.i2106595.dataclasses.NotificationsManager.showNotification
+import com.muhammadfarazrashid.i2106595.managers.WebserviceHelper
 import com.squareup.picasso.Picasso
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -221,7 +222,8 @@ class calendarPage : AppCompatActivity() {
 
             if(checkFiels()){
                 val intent = Intent(this, homePageActivity::class.java)
-                UserManager.getCurrentUser()?.let { it1 -> FirebaseManager.addBookingToUser(it1.id,selectedTime,dateString,currentMentor.id) }
+                val webserviceHelper= WebserviceHelper(this)
+                UserManager.getCurrentUser()?.let { it1 ->webserviceHelper.addBooking(it1.id,currentMentor.id,dateString,selectedTime) }
                 showNotification(
                     applicationContext,
                     "Appointment Booked with ${currentMentor.name} for $dateString at $selectedTime",

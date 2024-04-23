@@ -10,6 +10,7 @@ import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 import com.muhammadfarazrashid.i2106595.Mentor
+import com.muhammadfarazrashid.i2106595.Session
 import com.muhammadfarazrashid.i2106595.dataclasses.User
 import org.json.JSONArray
 import org.json.JSONException
@@ -429,12 +430,103 @@ class WebserviceHelper(private val context: Context) {
         Volley.newRequestQueue(context).add(stringRequest)
     }
 
+    //write code to add bookings
+
+    fun addBooking(userId: String, mentorId: String, bookingDate: String, bookingTime: String) {
+        val queue = Volley.newRequestQueue(context)
+
+        val url = BASE_URL + "add_booking.php" // Replace with your server URL
+
+        val stringRequest = object: StringRequest(
+            Method.POST, url,
+            Response.Listener<String> { response ->
+                // Handle response
+                Log.d(TAG, "Response: $response")
+                Toast.makeText(context, "Booking added successfully", Toast.LENGTH_SHORT).show()
+            },
+            Response.ErrorListener { error ->
+                // Handle error
+                Log.e(TAG, "Error adding booking: ${error.message}")
+            }
+        ) {
+            override fun getParams(): Map<String, String> {
+                val params = HashMap<String, String>()
+                params["id"] = UUID.randomUUID().toString()
+                params["userId"] = userId
+                params["mentorId"] = mentorId
+                params["bookingDate"] = bookingDate
+                params["bookingTime"] = bookingTime
+                return params
+            }
+        }
+
+        // Add the request to the RequestQueue.
+        queue.add(stringRequest)
+    }
+
+    //get booking and return list of sessions
+
+    fun getBookings(userId: String, callback: (MutableList<Session>?) -> Unit){
+        val url = BASE_URL + "get_booking.php"
+
+        val stringRequest = object : StringRequest(
+            Method.POST, url,
+            Response.Listener<String> { response ->
+                // Handle response
+                Log.d(TAG, "Response: $response")
+
+                try {
+                    val jsonObject = JSONObject(response)
+                    if (jsonObject.has("success") && jsonObject.getInt("success") == 1) {
+                        val bookingsArray = jsonObject.getJSONArray("bookings")
+                        val sessions = mutableListOf<Session>()
+                        for (i in 0 until bookingsArray.length()) {
+                            val bookingObject = bookingsArray.getJSONObject(i)
+                            val bookingDate = bookingObject.getString("bookingDate")
+                            val bookingTime = bookingObject.getString("bookingTime")
+                            val mentorId = bookingObject.getString("mentorId")
+                            val session = Session(bookingDate, bookingTime, mentorId)
+                            sessions.add(session)
+                        }
+                        callback(sessions)
+                    } else {
+                        callback(null)
+                    }
+                } catch (e: JSONException) {
+                    Log.e(TAG, "JSON parsing error: ${e.message}")
+                    callback(null)
+                }
+            },
+            Response.ErrorListener { error ->
+                // Handle error
+                Log.e(TAG, "Error getting bookings: ${error.message}")
+                callback(null)
+            }
+        ) {
+            override fun getParams(): Map<String, String> {
+                val params = HashMap<String, String>()
+                params["userId"] = userId
+                return params
+            }
+        }
+
+        // Add the request to the RequestQueue.
+        Volley.newRequestQueue(context).add(stringRequest)
+    }
+
+
+
+
+
+
 
 
     interface FavouritesCallback {
         fun onSuccess(favourites: List<String?>?)
         fun onError(errorMessage: String?)
     }
+
+
 
 
 }
