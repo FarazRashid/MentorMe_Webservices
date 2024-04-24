@@ -9,9 +9,12 @@ import com.android.volley.Response
 import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
+import com.muhammadfarazrashid.i2106595.AllMessagesChat
 import com.muhammadfarazrashid.i2106595.Mentor
+import com.muhammadfarazrashid.i2106595.MentorItem
 import com.muhammadfarazrashid.i2106595.ReviewItem
 import com.muhammadfarazrashid.i2106595.Session
+import com.muhammadfarazrashid.i2106595.UserManager
 import com.muhammadfarazrashid.i2106595.dataclasses.User
 import org.json.JSONArray
 import org.json.JSONException
@@ -21,7 +24,7 @@ import java.util.UUID
 //using volley
 class WebserviceHelper(private val context: Context) {
 
-    private val BASE_URL = "http://192.168.193.1/"
+    private val BASE_URL = "http://192.168.18.54/"
 
     fun saveUserToWebService(user: User) {
         val queue = Volley.newRequestQueue(context)
@@ -643,7 +646,7 @@ class WebserviceHelper(private val context: Context) {
             Response.Listener<String> { response ->
                 // Handle response
                 Log.d(TAG, "Response: $response")
-                Toast.makeText(context, "Registered for mentorr chat", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Registered for mentor chat", Toast.LENGTH_SHORT).show()
             },
             Response.ErrorListener { error ->
                 // Handle error
@@ -661,6 +664,136 @@ class WebserviceHelper(private val context: Context) {
         // Add the request to the RequestQueue.
         queue.add(stringRequest)
     }
+
+    //fetch mentor chat and get mentor objects and return them
+    fun fetchMentorChats(userId: String, callback: (MutableList<AllMessagesChat>) -> Unit) {
+        val url = BASE_URL + "fetch_mentor_chat.php"
+
+        val stringRequest = object : StringRequest(
+            Method.POST, url,
+            Response.Listener<String> { response ->
+                // Handle response
+                Log.d(TAG, "Response: $response")
+
+                try {
+                    val jsonObject = JSONObject(response)
+                    val success = jsonObject.getInt("success")
+
+                    if (success == 1) {
+                        val chatsJsonArray = jsonObject.getJSONArray("chats")
+                        val chats = mutableListOf<AllMessagesChat>()
+                        for (i in 0 until chatsJsonArray.length()) {
+                            val chatJsonObject = chatsJsonArray.getJSONObject(i)
+                            val mentor = Mentor(
+                                chatJsonObject.getString("id"),
+                                chatJsonObject.getString("name"),
+                                chatJsonObject.getString("position"),
+                                chatJsonObject.getString("availability"),
+                                chatJsonObject.getString("salary"),
+                                chatJsonObject.getString("description"),
+                                BASE_URL + "Images/MentorMe/" + chatJsonObject.getString("profilePictureUrl")
+                            )
+                            var available = false
+                            if (mentor.availability == "available")
+                                available = true
+
+                            Log.d("FetchMentorChats", "Mentor Name: ${mentor.name} Mentor ID: ${mentor.id} Mentor Position: ${mentor.position} Mentor Availability: ${mentor.availability} Mentor Salary: ${mentor.salary} Mentor Description: ${mentor.description} Mentor Profile Picture URL: ${mentor.getprofilePictureUrl()}")
+
+                            val mentorItem = AllMessagesChat(mentor, mentor.id, mentor.id+"_"+ (UserManager.getCurrentUser()?.id
+                                ?: ""),mentor.name, mentor.getprofilePictureUrl())
+                            chats.add(mentorItem)
+                        }
+                        callback(chats)
+                    } else {
+                        callback(emptyList<AllMessagesChat>().toMutableList())
+                    }
+                } catch (e: JSONException) {
+                    e.printStackTrace()
+                    callback(emptyList<AllMessagesChat>().toMutableList())
+                }
+            },
+            Response.ErrorListener { error ->
+                // Handle error
+                Log.e(TAG, "Error fetching community chats: ${error.message}")
+                callback(emptyList<AllMessagesChat>().toMutableList())
+            }
+        ) {
+            override fun getParams(): Map<String, String> {
+                val params = HashMap<String, String>()
+                params["userId"] = userId
+                return params
+            }
+        }
+
+        // Add the request to the RequestQueue.
+        Volley.newRequestQueue(context).add(stringRequest)
+    }
+
+    fun fetchCommunityChats(userId: String, callback: (List<MentorItem>) -> Unit) {
+        val url = BASE_URL + "fetch_community_chats.php"
+
+        val stringRequest = object : StringRequest(
+            Method.POST, url,
+            Response.Listener<String> { response ->
+                // Handle response
+                Log.d(TAG, "Response: $response")
+
+                try {
+                    val jsonObject = JSONObject(response)
+                    val success = jsonObject.getInt("success")
+
+                    if (success == 1) {
+                        val chatsJsonArray = jsonObject.getJSONArray("chats")
+                        val chats = mutableListOf<MentorItem>()
+                        for (i in 0 until chatsJsonArray.length()) {
+                            val chatJsonObject = chatsJsonArray.getJSONObject(i)
+                            val mentor = Mentor(
+                                chatJsonObject.getString("id"),
+                                chatJsonObject.getString("name"),
+                                chatJsonObject.getString("position"),
+                                chatJsonObject.getString("availability"),
+                                chatJsonObject.getString("salary"),
+                                chatJsonObject.getString("description"),
+                                BASE_URL + "Images/MentorMe/" + chatJsonObject.getString("profilePictureUrl")
+                            )
+                            var available = false
+                            if (mentor.availability == "available")
+                                available = true
+
+
+                            Log.d("FetchCommunityChats", "Mentor Name: ${mentor.name} Mentor ID: ${mentor.id} Mentor Position: ${mentor.position} Mentor Availability: ${mentor.availability} Mentor Salary: ${mentor.salary} Mentor Description: ${mentor.description} Mentor Profile Picture URL: ${mentor.getprofilePictureUrl()}")
+
+                            val mentorItem = MentorItem(mentor, mentor.id, mentor.getprofilePictureUrl(), available)
+                            chats.add(mentorItem)
+                        }
+                        callback(chats)
+                    } else {
+                        callback(emptyList())
+                    }
+                } catch (e: JSONException) {
+                    e.printStackTrace()
+                    callback(emptyList())
+                }
+            },
+            Response.ErrorListener { error ->
+                // Handle error
+                Log.e(TAG, "Error fetching community chats: ${error.message}")
+                callback(emptyList())
+            }
+        ) {
+            override fun getParams(): Map<String, String> {
+                val params = HashMap<String, String>()
+                params["userId"] = userId
+                return params
+            }
+        }
+
+        // Add the request to the RequestQueue.
+        Volley.newRequestQueue(context).add(stringRequest)
+    }
+
+
+
 
 
     interface FavouritesCallback {

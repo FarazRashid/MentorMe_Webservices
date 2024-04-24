@@ -16,6 +16,13 @@ public class MentorItem {
         this.isMentorAvailable = isMentorAvailable;
     }
 
+    public MentorItem(Mentor mentor, String id, String profileImageUrl, boolean isMentorAvailable) {
+        this.mentor = mentor;
+        this.id = id;
+        this.profileImageUrl = profileImageUrl;
+        this.isMentorAvailable = isMentorAvailable;
+    }
+
     public void setMentor(Mentor mentor){
         this.mentor = mentor;
     }

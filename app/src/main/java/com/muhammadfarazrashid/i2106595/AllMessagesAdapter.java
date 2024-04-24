@@ -62,6 +62,8 @@ public class AllMessagesAdapter extends RecyclerView.Adapter<AllMessagesAdapter.
 
         holder.unreadMessages.setText(unreadMessageCount + " new message");
 
+        holder.userName.setText(message.getUserName());
+
         // Set text color based on the number of unread messages
         if (unreadMessageCount == 0) {
             holder.unreadMessages.setTextColor(ContextCompat.getColor(context, R.color.black));
@@ -70,27 +72,8 @@ public class AllMessagesAdapter extends RecyclerView.Adapter<AllMessagesAdapter.
             holder.unreadMessages.setTextColor(ContextCompat.getColor(context, R.color.red));
         }
 
+        Picasso.get().load(message.getMentor().getprofilePictureUrl()).into(holder.otherUserImage);
 
-        Mentor.getMentorById(message.getId(), new Mentor.OnMentorListener() {
-            @Override
-            public void onSuccess(Mentor fetchedMentor) {
-                // Set mentor when fetched successfully
-                message.setMentor(fetchedMentor);
-                message.setUserName(fetchedMentor.getName());
-                holder.userName.setText(fetchedMentor.getName());
-                Picasso.get().load(message.getMentor().getprofilePictureUrl()).into(holder.otherUserImage);
-
-
-                Log.d("AllMessagesChat", "Mentor fetched successfully: " + fetchedMentor.getId());
-                // Notify any listeners or perform any further actions
-            }
-
-            @Override
-            public void onFailure(String errorMessage) {
-                // Handle failure to fetch mentor details
-                Log.e("AllMessagesChat", "Failed to fetch mentor details: " + errorMessage);
-            }
-        });
 
         // Set OnClickListener on the card
         holder.itemView.setOnClickListener(new View.OnClickListener() {

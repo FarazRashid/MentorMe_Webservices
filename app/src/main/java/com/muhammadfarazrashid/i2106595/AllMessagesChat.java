@@ -36,6 +36,15 @@ public class AllMessagesChat {
         this.chatId = chatId;
     }
 
+    public AllMessagesChat(Mentor mentor,String id, String chatId, String userName, String otherUserImage) {
+
+        this.mentor = mentor;
+        this.chatId = chatId;
+        this.id = id;
+        this.userName = userName;
+        this.otherUserImage = otherUserImage;
+    }
+
     public void setOtherUserImage(String otherUserImage) {
         this.otherUserImage = otherUserImage;
     }

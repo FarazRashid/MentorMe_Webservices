@@ -32,24 +32,7 @@ public class MentorAdapter extends RecyclerView.Adapter<MentorViewHolder> {
         MentorItem mentorItem = mentorItems.get(position);
         holder.bind(mentorItem);
 
-
-
-        Mentor.getMentorById(mentorItem.getId(), new Mentor.OnMentorListener() {
-            @Override
-            public void onSuccess(Mentor fetchedMentor) {
-                // Set mentor when fetched successfully
-                mentorItem.setMentor(fetchedMentor);
-                Picasso.get().load(mentorItem.getMentor().getprofilePictureUrl()).into(holder.profileImageView);
-
-
-            }
-
-            @Override
-            public void onFailure(String errorMessage) {
-                // Handle failure to fetch mentor details
-                Log.e("AllMessagesChat", "Failed to fetch mentor details: " + errorMessage);
-            }
-        });
+        Picasso.get().load(mentorItem.getMentor().getprofilePictureUrl()).into(holder.profileImageView);
 
         // Set OnClickListener on the item
         holder.itemView.setOnClickListener(new View.OnClickListener() {
