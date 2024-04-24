@@ -11,6 +11,7 @@ import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
+import com.muhammadfarazrashid.i2106595.managers.WebserviceHelper
 import com.squareup.picasso.Picasso
 
 class aboutMentorPage : AppCompatActivity() {
@@ -95,87 +96,17 @@ class aboutMentorPage : AppCompatActivity() {
         profilePictureUrl?.let { Log.d("AboutMentorPage", "Mentor Profile Picture URL: $it") }
     }
 
-    private fun checkIfCommunityChatExists(callback: (Boolean) -> Unit) {
-        val database = FirebaseDatabase.getInstance()
-        val chatRef = database.getReference("chat/community_chats/${currentMentor.id}/users")
-        chatRef.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(dataSnapshot: DataSnapshot) {
-                callback(dataSnapshot.exists())
-            }
 
-            override fun onCancelled(databaseError: DatabaseError) {
-                // Handle database error
-                Log.e("CalendarPage", "Error fetching chat data: ${databaseError.message}")
-                callback(false)
-            }
-        })
-    }
 
-    private fun isAlreadyRegisteredForChat(callback: (Boolean) -> Unit) {
-        val database = FirebaseDatabase.getInstance()
-        val currentUser = UserManager.getCurrentUser()
-        val userChatRef = database.getReference("users/${currentUser?.id}/chats/community_chats")
-        userChatRef.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(dataSnapshot: DataSnapshot) {
-                if (dataSnapshot.exists()) {
-                    var isRegistered = false
-                    for (snapshot in dataSnapshot.children) {
-                        val mentorId = snapshot.value as String
-                        if (mentorId == currentMentor.id) {
-                            isRegistered = true
-                            Log.d("CalendarPage", "Is already registered for chat: $isRegistered")
-                            break
-                        }
-                    }
-                    Log.d("CalendarPage", "Is already registered for chat: $isRegistered")
-                    callback(isRegistered)
-                } else {
-                    callback(false)
-                }
-            }
 
-            override fun onCancelled(databaseError: DatabaseError) {
-                // Handle database error
-                Log.e("CalendarPage", "Error fetching user chat data: ${databaseError.message}")
-                callback(false)
-            }
-        })
-    }
 
     private fun registerForCommunityChat() {
-        val database = FirebaseDatabase.getInstance()
-        val chatRef = database.getReference("chat").push()
-        val chatKey = chatRef.key
-        val currentUser = UserManager.getCurrentUser()
+        val webserviceHelper= WebserviceHelper(this)
+        UserManager.getCurrentUser()
+            ?.let { webserviceHelper.registerForCommunityChat(it.id,currentMentor.id) }
 
-        // Save chat reference under user's chats
-        currentUser?.let { user ->
-            val userChatRef = database.getReference("users/${user.id}/chats/community_chats")
-            userChatRef.push().setValue(currentMentor.id)
-        }
-
-        // Optionally, save chat details under the chat node
-        chatKey?.let { key ->
-            val chatDetailsRef = database.getReference("chat/community_chats/${currentMentor.id}/users")
-            currentUser?.id?.let { userId ->
-                chatDetailsRef.push().setValue(userId)
-            }
-        }
     }
 
-    private fun addUserToCommunityChat() {
-        val database = FirebaseDatabase.getInstance()
-        val chatRef = database.getReference("chat/community_chats/${currentMentor.id}/users")
-        val currentUser = UserManager.getCurrentUser()
-        currentUser?.let { user ->
-            chatRef.push().setValue(user.id)
-        }
-
-        currentUser?.let { user ->
-            val userChatRef = database.getReference("users/${user.id}/chats/community_chats")
-            userChatRef.push().setValue(currentMentor.id)
-        }
-    }
 
     private fun navigateToMentorReviewPage(mentor: Mentor) {
         val intent = Intent(this, reviewpage::class.java)
@@ -185,26 +116,9 @@ class aboutMentorPage : AppCompatActivity() {
 
     private fun navigateToCommunityChatPage(mentor: Mentor) {
         val intent = Intent(this, communityChatActivity::class.java)
-        checkIfCommunityChatExists { communityChatExists ->
-            if (communityChatExists) {
-                // Community chat exists, check if user is registered
-                isAlreadyRegisteredForChat { isRegistered ->
-                    if (!isRegistered) {
-                        addUserToCommunityChat()
-                        Log.d("CalendarPage", "User is now registered for community chat")
-                    }
-                    // Proceed to community chat activity
-                    intent.putExtra("mentor", mentor)
-                    startActivity(intent)
-                }
-            } else {
-                // Community chat doesn't exist, create and register the user
-                registerForCommunityChat()
-                Log.d("CalendarPage", "Created a new community chat and registered user")
-                intent.putExtra("mentor", mentor)
-                startActivity(intent)
-            }
-        }
+       registerForCommunityChat()
+        intent.putExtra("mentor",mentor)
+        startActivity(intent)
     }
 
     private fun navigateToSignUpPage(mentor: Mentor) {

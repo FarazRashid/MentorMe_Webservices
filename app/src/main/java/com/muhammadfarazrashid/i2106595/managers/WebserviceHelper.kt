@@ -21,7 +21,7 @@ import java.util.UUID
 //using volley
 class WebserviceHelper(private val context: Context) {
 
-    private val BASE_URL = "http://192.168.18.54/"
+    private val BASE_URL = "http://192.168.193.1/"
 
     fun saveUserToWebService(user: User) {
         val queue = Volley.newRequestQueue(context)
@@ -598,6 +598,68 @@ class WebserviceHelper(private val context: Context) {
 
         // Add the request to the RequestQueue.
         Volley.newRequestQueue(context).add(stringRequest)
+    }
+
+    //register for community chat, pass mentor id as id and userId as userId
+
+    fun registerForCommunityChat(userId: String, mentorId: String) {
+        val queue = Volley.newRequestQueue(context)
+
+        val url = BASE_URL + "register_for_community_chat.php" // Replace with your server URL
+
+        val stringRequest = object: StringRequest(
+            Method.POST, url,
+            Response.Listener<String> { response ->
+                // Handle response
+                Log.d(TAG, "Response: $response")
+                Toast.makeText(context, "Registered for community chat", Toast.LENGTH_SHORT).show()
+            },
+            Response.ErrorListener { error ->
+                // Handle error
+                Log.e(TAG, "Error registering for community chat: ${error.message}")
+            }
+        ) {
+            override fun getParams(): Map<String, String> {
+                val params = HashMap<String, String>()
+                params["id"] = mentorId
+                params["userId"] = userId
+                return params
+            }
+        }
+
+        // Add the request to the RequestQueue.
+        queue.add(stringRequest)
+    }
+
+    //register for mentor chat similar to above, but add mentor as param as well
+
+    fun registerForMentorChat(userId: String, mentorId: String) {
+        val queue = Volley.newRequestQueue(context)
+
+        val url = BASE_URL + "register_for_mentor_chat.php" // Replace with your server URL
+
+        val stringRequest = object: StringRequest(
+            Method.POST, url,
+            Response.Listener<String> { response ->
+                // Handle response
+                Log.d(TAG, "Response: $response")
+                Toast.makeText(context, "Registered for mentorr chat", Toast.LENGTH_SHORT).show()
+            },
+            Response.ErrorListener { error ->
+                // Handle error
+                Log.e(TAG, "Error registering for mentor chat: ${error.message}")
+            }
+        ) {
+            override fun getParams(): Map<String, String> {
+                val params = HashMap<String, String>()
+                params["mentorId"] = mentorId
+                params["userId"] = userId
+                return params
+            }
+        }
+
+        // Add the request to the RequestQueue.
+        queue.add(stringRequest)
     }
 
 

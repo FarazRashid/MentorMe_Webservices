@@ -89,82 +89,20 @@ class calendarPage : AppCompatActivity() {
 
     }
 
-    private fun isAlreadyRegisteredForChat(callback: (Boolean) -> Unit) {
-        val database = FirebaseDatabase.getInstance()
-        val currentUser = UserManager.getCurrentUser()
-        val userChatRef = database.getReference("users/${currentUser?.id}/chats/mentor_chats")
-        userChatRef.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(dataSnapshot: DataSnapshot) {
-                if (dataSnapshot.exists()) {
-                    var isRegistered = false
-                    for (snapshot in dataSnapshot.children) {
-                        val mentorId = snapshot.value as String
-                        if (mentorId == currentMentor.id) {
-                            Log.d("CalendarPage", "Is already registered for chat: $isRegistered")
-                            isRegistered = true
-                            break
-                        }
-                    }
-                    Log.d("CalendarPage", "Is already registered for chat: $isRegistered")
-                    callback(isRegistered)
-                } else {
-                    callback(false)
-                }
-            }
 
-            override fun onCancelled(databaseError: DatabaseError) {
-                // Handle database error
-                Log.e("CalendarPage", "Error fetching user chat data: ${databaseError.message}")
-                callback(false)
-            }
-        })
-    }
 
 
     private fun registerForMentorChat() {
-        val database = FirebaseDatabase.getInstance()
-        val chatRef = database.getReference("chat").push()
-        val chatKey = chatRef.key
-        val currentUser = UserManager.getCurrentUser()
-
-        // Save chat reference under user's chats
-        currentUser?.let { user ->
-            val userChatRef = database.getReference("users/${user.id}/chats/mentor_chats")
-            chatKey?.let { key ->
-                userChatRef.child(key).setValue(currentMentor.id)
-            }
-        }
-
-        // Save chat reference under mentor's chats
-        val mentorChatRef = database.getReference("Mentors/${currentMentor.id}/chats/mentor_chats")
-        chatKey?.let { key ->
-            mentorChatRef.child(key).setValue(currentUser?.id)
-        }
-
-        // Optionally, save chat details under the chat node
-        chatKey?.let { key ->
-            val chatDetailsRef = database.getReference("chat/mentor_chats/$key/details")
-            chatDetailsRef.child("mentor_id").setValue(currentMentor.id)
-            currentUser?.id?.let { userId ->
-                chatDetailsRef.child("user_id").setValue(userId)
-            }
-        }
+        val webserviceHelper= WebserviceHelper(this)
+        UserManager.getCurrentUser()
+            ?.let { webserviceHelper.registerForMentorChat(it.id,currentMentor.id) }
     }
 
     private fun navigateToChatPage(mentor: Mentor) {
         val intent = Intent(this, MentorChatActivity::class.java)
-        isAlreadyRegisteredForChat { isRegistered ->
-            if (isRegistered) {
-                // User is already registered for chat with the current mentor
-                Log.d("CalendarPage", "User is already registered for chat with mentor")
-            } else {
-                // Register the user for chat with the current mentor
-                registerForMentorChat()
-                Log.d("CalendarPage", "User is now registered for chat with mentor")
-            }
-            intent.putExtra("mentor", mentor)
-            startActivity(intent)
-        }
+        registerForMentorChat()
+        intent.putExtra("mentor",mentor)
+        startActivity(intent)
     }
 
     private fun checkFiels(): Boolean{
