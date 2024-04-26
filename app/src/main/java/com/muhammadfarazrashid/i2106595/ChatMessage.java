@@ -8,7 +8,7 @@ import java.util.Date;
 import java.util.Locale;
 
 public class ChatMessage {
-    private String message;
+    private String message="";
     private String time;
     private boolean isUser; // true if the message is sent by the user, false otherwise
 

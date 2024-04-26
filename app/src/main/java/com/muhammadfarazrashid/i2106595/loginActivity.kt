@@ -81,11 +81,11 @@ class loginActivity : AppCompatActivity() {
                 //call user managerclass and save it
                 val userManager = UserManager.getInstance()
                 userManager.setCurrentUser(user)
-//                UserManager.saveUserLoggedInSP(
-//                    true,
-//                    getSharedPreferences("USER_LOGIN", MODE_PRIVATE)
-//                )
-//                UserManager.saveUserEmailSP(email, getSharedPreferences("USER_LOGIN", MODE_PRIVATE))
+                UserManager.saveUserLoggedInSP(
+                    true,
+                    getSharedPreferences("USER_LOGIN", MODE_PRIVATE)
+                )
+                UserManager.saveUserEmailSP(email, getSharedPreferences("USER_LOGIN", MODE_PRIVATE))
 
                 FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
                     if (!task.isSuccessful) {

@@ -1,6 +1,7 @@
 package com.muhammadfarazrashid.i2106595
 
 import android.content.ContentValues.TAG
+import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
@@ -8,6 +9,7 @@ import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageReference
 import com.muhammadfarazrashid.i2106595.dataclasses.User
 import com.muhammadfarazrashid.i2106595.dataclasses.getUserWithEmail
+import com.muhammadfarazrashid.i2106595.managers.WebserviceHelper
 import com.squareup.picasso.MemoryPolicy
 import com.squareup.picasso.NetworkPolicy
 import com.squareup.picasso.Picasso
@@ -78,8 +80,10 @@ object UserManager {
         Log.d(TAG, "loadUserInformation: ${currentUser.bannerImageUrl}")
     }
 
-    fun fetchAndSetCurrentUser(email: String, callback: () -> Unit) {
-        getUserWithEmail(email) { user ->
+    fun fetchAndSetCurrentUser(email: String, context: Context, callback: () -> Unit) {
+        //set context to be where it is being called from
+        val webserviceHelper = WebserviceHelper(context)
+        webserviceHelper.getUserByEmail(email) { user ->
             if (user != null) {
                 currentUser = user
                 logUser(user)
@@ -88,7 +92,6 @@ object UserManager {
                 callback.invoke() // Execute the callback function
             }
         }
-
 
     }
 }

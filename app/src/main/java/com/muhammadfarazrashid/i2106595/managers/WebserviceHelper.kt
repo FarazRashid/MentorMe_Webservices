@@ -10,6 +10,7 @@ import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 import com.muhammadfarazrashid.i2106595.AllMessagesChat
+import com.muhammadfarazrashid.i2106595.ChatMessage
 import com.muhammadfarazrashid.i2106595.Mentor
 import com.muhammadfarazrashid.i2106595.MentorItem
 import com.muhammadfarazrashid.i2106595.ReviewItem
@@ -792,13 +793,211 @@ class WebserviceHelper(private val context: Context) {
         Volley.newRequestQueue(context).add(stringRequest)
     }
 
+    //send message in mentor chat function and pass it
+    // the message object in parms. It will  check if
+    // any of the properties are not null and then push it to the database
+    //e.g check if messageImarUrl is not "" or videoImageUrl is not "" etc.
 
+    fun sendMessageInMentorChat(message: ChatMessage,mentor:Mentor) {
+        val queue = Volley.newRequestQueue(context)
 
+        val url = BASE_URL + "send_message_in_mentor_chat.php" // Replace with your server URL
+
+        val stringRequest = object: StringRequest(
+            Method.POST, url,
+            Response.Listener<String> { response ->
+                // Handle response
+                Log.d(TAG, "Response: $response")
+                Toast.makeText(context, "Message sent successfully", Toast.LENGTH_SHORT).show()
+            },
+            Response.ErrorListener { error ->
+                // Handle error
+                Log.e(TAG, "Error sending message: ${error.message}")
+            }
+        ) {
+            override fun getParams(): Map<String, String> {
+                val params = HashMap<String, String>()
+                params["chatId"] = mentor.id+"_"+(UserManager.getCurrentUser()?.id
+                    ?: "")
+                params["messageId"] = message.id
+                params["userId"] = UserManager.getCurrentUser()?.id ?: ""
+                params["time"] = message.time
+                message.message?.let { if
+                        (it.isNotEmpty()) params["message"] = it }
+                message.messageImageUrl?.let { if (it.isNotEmpty()) params["messageImageUrl"] = it }
+                message.videoImageUrl?.let { if (it.isNotEmpty()) params["videoImageUrl"] = it }
+                message.voiceMemoUrl?.let { if (it.isNotEmpty()) params["voiceMemoUrl"] = it }
+                message.documentUrl?.let { if (it.isNotEmpty()) params["documentUrl"] = it }
+                return params
+            }
+        }
+
+        // Add the request to the RequestQueue.
+        queue.add(stringRequest)
+    }
+
+    //fetch messages in mentor chat function
+
+    fun fetchMessagesInMentorChat(userId: String, mentorId: String, mentorImageUrl:String, callback: (List<ChatMessage>) -> Unit) {
+        val url = BASE_URL + "fetch_messages_in_mentor_chat.php"
+        Log.d("FetchMessages", "chatId= $mentorId"+"_"+userId)
+        val stringRequest = object : StringRequest(
+            Method.POST, url,
+            Response.Listener<String> { response ->
+                // Handle response
+                Log.d(TAG, "Response: $response")
+
+                try {
+                    val jsonObject = JSONObject(response)
+                    val success = jsonObject.getInt("success")
+
+                    if (success == 1) {
+                        val messagesJsonArray = jsonObject.getJSONArray("messages")
+                        val messages = mutableListOf<ChatMessage>()
+                        for (i in 0 until messagesJsonArray.length()) {
+                            val messageJsonObject = messagesJsonArray.getJSONObject(i)
+
+                            var isUser=false
+                            if(messageJsonObject.getString("userId")==userId)
+                                isUser=true
+
+                            val message = ChatMessage(
+                                messageJsonObject.getString("messageId"),
+                                messageJsonObject.optString("message", ""),
+                                messageJsonObject.getString("time"),
+                                isUser,
+                                mentorImageUrl,
+                                messageJsonObject.optString("messageImageUrl", ""), // Use optString instead of getString
+                                messageJsonObject.optString("videoImageUrl", ""), // Use optString instead of getString
+                                messageJsonObject.optString("voiceMemoUrl", ""), // Use optString instead of getString
+                                messageJsonObject.optString("documentUrl", "") // Use optString instead of getString
+                            )
+                            Log.d("FetchMessages", "Message: ${message.message} Message ID: ${message.id} Time: ${message.time} Is User: ${message.isUser} Message Image URL: ${message.messageImageUrl} Video Image URL: ${message.videoImageUrl} Voice Memo URL: ${message.voiceMemoUrl} Document URL: ${message.documentUrl}")
+                            messages.add(message)
+                        }
+                        callback(messages)
+                    } else {
+                        callback(emptyList())
+                    }
+                } catch (e: JSONException) {
+                    e.printStackTrace()
+                    callback(emptyList())
+                }
+            },
+            Response.ErrorListener { error ->
+                // Handle error
+                Log.e("Fetch messages service", "Error fetching messages: ${error.message}")
+                callback(emptyList())
+            }
+        ) {
+            override fun getParams(): Map<String, String> {
+                val params = HashMap<String, String>()
+                params["chatId"]=mentorId+"_"+userId
+                return params
+            }
+        }
+
+        // Add the request to the RequestQueue.
+        Volley.newRequestQueue(context).add(stringRequest)
+    }
+
+    //edit message
+
+    fun editMessageInMentorChat(messageId: String, message: String) {
+        val queue = Volley.newRequestQueue(context)
+
+        val url = BASE_URL + "edit_message_mentor_chat.php" // Replace with your server URL
+
+        val stringRequest = object: StringRequest(
+            Method.POST, url,
+            Response.Listener<String> { response ->
+                // Handle response
+                Log.d(TAG, "Response: $response")
+                Toast.makeText(context, "Message edited successfully", Toast.LENGTH_SHORT).show()
+            },
+            Response.ErrorListener { error ->
+                // Handle error
+                Log.e(TAG, "Error editing message: ${error.message}")
+            }
+        ) {
+            override fun getParams(): Map<String, String> {
+                val params = HashMap<String, String>()
+                params["messageId"] = messageId
+                params["message"] = message
+                return params
+            }
+        }
+
+        // Add the request to the RequestQueue.
+        queue.add(stringRequest)
+    }
+
+    //delete message
+
+    fun deleteMessage(messageId: String,chatType:String) {
+        val queue = Volley.newRequestQueue(context)
+
+        val url = BASE_URL + "delete_message_"+ chatType+".php" // Replace with your server URL
+
+        val stringRequest = object: StringRequest(
+            Method.POST, url,
+            Response.Listener<String> { response ->
+                // Handle response
+                Log.d(TAG, "Response: $response")
+                Toast.makeText(context, "Message deleted successfully", Toast.LENGTH_SHORT).show()
+            },
+            Response.ErrorListener { error ->
+                // Handle error
+                Log.e(TAG, "Error deleting message: ${error.message}")
+            }
+        ) {
+            override fun getParams(): Map<String, String> {
+                val params = HashMap<String, String>()
+                params["messageId"] = messageId
+                return params
+            }
+        }
+
+        // Add the request to the RequestQueue.
+        queue.add(stringRequest)
+    }
 
 
     interface FavouritesCallback {
         fun onSuccess(favourites: List<String?>?)
         fun onError(errorMessage: String?)
+    }
+
+    //write function get user with email and return user with callback
+
+    fun getUserByEmail(email: String, callback: (User?) -> Unit) {
+        val queue = Volley.newRequestQueue(context)
+
+        val url = BASE_URL + "get_user_with_email.php" // Replace with your server URL
+
+        val stringRequest = object: StringRequest(
+            Method.POST, url,
+            Response.Listener<String> { response ->
+                // Handle response
+                Log.d(TAG, "Response: $response")
+                val user = parseResponseToUser(response)
+                callback(user)
+            },
+            Response.ErrorListener { error ->
+                // Handle error
+                Log.e(TAG, "Error getting user by email: ${error.message}")
+                callback(null)
+            }
+        ) {
+            override fun getParams(): Map<String, String> {
+                val params = HashMap<String, String>()
+                params["email"] = email
+                return params
+            }
+        }
+
+        // Add the request to the RequestQueue.
+        queue.add(stringRequest)
     }
 
 

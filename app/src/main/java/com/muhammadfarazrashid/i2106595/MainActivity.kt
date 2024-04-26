@@ -93,9 +93,8 @@ class MainActivity : AppCompatActivity() {
 
                 val intent = Intent(this, homePageActivity::class.java)
 
-                UserManager.getInstance().fetchAndSetCurrentUser(it)
+                UserManager.getInstance().fetchAndSetCurrentUser(it,this)
                 {
-                    //add logged in boolean to shared preferences
                     startActivity(intent)
                     finish()
                 }

@@ -197,6 +197,11 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatViewHolder> {
         return null;
     }
 
+    public void addMessages(@NotNull List<? extends ChatMessage> it) {
+        chatMessages.addAll(it);
+        notifyDataSetChanged();
+    }
+
     public interface onMessageClickListener {
 
         void onMessageClick(int position);
