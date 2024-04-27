@@ -2,7 +2,6 @@ package com.muhammadfarazrashid.i2106595.managers
 
 import android.content.ContentValues.TAG
 import android.content.Context
-import android.graphics.Bitmap
 import android.net.Uri
 import android.util.Base64
 import android.util.Log
@@ -840,6 +839,42 @@ class WebserviceHelper(private val context: Context) {
         queue.add(stringRequest)
     }
 
+    fun sendMessageInCommunityChat(message: ChatMessage,mentor:Mentor) {
+        val queue = Volley.newRequestQueue(context)
+
+        val url = BASE_URL + "send_message_in_community_chat.php" // Replace with your server URL
+
+        val stringRequest = object: StringRequest(
+            Method.POST, url,
+            Response.Listener<String> { response ->
+                // Handle response
+                Log.d(TAG, "Response: $response")
+                Toast.makeText(context, "Message sent successfully", Toast.LENGTH_SHORT).show()
+            },
+            Response.ErrorListener { error ->
+                // Handle error
+                Log.e(TAG, "Error sending message: ${error.message}")
+            }
+        ) {
+            override fun getParams(): Map<String, String> {
+                val params = HashMap<String, String>()
+                params["chatId"] = mentor.id
+                params["messageId"] = message.id
+                params["userId"] = UserManager.getCurrentUser()?.id ?: ""
+                params["time"] = message.time
+                message.message?.let { if (it.isNotEmpty()) params["message"] = it }
+                message.messageImageUrl?.let { if (it.isNotEmpty()) params["messageImageUrl"] = it }
+                message.videoImageUrl?.let { if (it.isNotEmpty()) params["videoImageUrl"] = it }
+                message.voiceMemoUrl?.let { if (it.isNotEmpty()) params["voiceMemoUrl"] = it }
+                message.documentUrl?.let { if (it.isNotEmpty()) params["documentUrl"] = it }
+                return params
+            }
+        }
+
+        // Add the request to the RequestQueue.
+        queue.add(stringRequest)
+    }
+
     //fetch messages in mentor chat function
 
     fun fetchMessagesInMentorChat(userId: String, mentorId: String, mentorImageUrl:String, callback: (List<ChatMessage>) -> Unit) {
@@ -905,9 +940,111 @@ class WebserviceHelper(private val context: Context) {
         Volley.newRequestQueue(context).add(stringRequest)
     }
 
+    fun fetchMessagesInCommunityChat(userId: String, mentorId: String, mentorImageUrl:String, userList: ArrayList<User>, callback: (List<ChatMessage>) -> Unit) {
+        val url = BASE_URL + "fetch_messages_in_community_chats.php"
+        Log.d("FetchMessages", "chatId= $mentorId")
+        val stringRequest = object : StringRequest(
+            Method.POST, url,
+            Response.Listener<String> { response ->
+                // Handle response
+                Log.d(TAG, "Response: $response")
+
+                try {
+                    val jsonObject = JSONObject(response)
+                    val success = jsonObject.getInt("success")
+
+                    if (success == 1) {
+                        val messagesJsonArray = jsonObject.getJSONArray("messages")
+                        val messages = mutableListOf<ChatMessage>()
+                        for (i in 0 until messagesJsonArray.length()) {
+                            val messageJsonObject = messagesJsonArray.getJSONObject(i)
+                            val messageUserId=messageJsonObject.getString("userId")
+
+                            var isUser=false
+                            if(messageUserId==userId)
+                                isUser=true
+                            var mentorImageUrl1=mentorImageUrl
+
+                            if(!isUser && messageUserId!=mentorId){
+                                for(user in userList){
+                                    if(user.id==messageUserId){
+                                        mentorImageUrl1=user.profilePictureUrl
+                                    }
+                                }
+                            }
+
+                            val message = ChatMessage(
+                                messageJsonObject.getString("messageId"),
+                                messageJsonObject.optString("message", ""),
+                                messageJsonObject.getString("time"),
+                                isUser,
+                                mentorImageUrl1,
+                                messageJsonObject.optString("messageImageUrl", ""), // Use optString instead of getString
+                                messageJsonObject.optString("videoImageUrl", ""), // Use optString instead of getString
+                                messageJsonObject.optString("voiceMemoUrl", ""), // Use optString instead of getString
+                                messageJsonObject.optString("documentUrl", "") // Use optString instead of getString
+                            )
+                            Log.d("FetchMessages", "Message: ${message.message} Message ID: ${message.id} Time: ${message.time} Is User: ${message.isUser} Message Image URL: ${message.messageImageUrl} Video Image URL: ${message.videoImageUrl} Voice Memo URL: ${message.voiceMemoUrl} Document URL: ${message.documentUrl}")
+                            messages.add(message)
+                        }
+                        callback(messages)
+                    } else {
+                        callback(emptyList())
+                    }
+                } catch (e: JSONException) {
+                    e.printStackTrace()
+                    callback(emptyList())
+                }
+            },
+            Response.ErrorListener { error ->
+                // Handle error
+                Log.e("Fetch messages service", "Error fetching messages: ${error.message}")
+                callback(emptyList())
+            }
+        ) {
+            override fun getParams(): Map<String, String> {
+                val params = HashMap<String, String>()
+                params["chatId"]=mentorId
+                return params
+            }
+        }
+
+        // Add the request to the RequestQueue.
+        Volley.newRequestQueue(context).add(stringRequest)
+    }
+
     //edit message
 
     fun editMessageInMentorChat(messageId: String, message: String) {
+        val queue = Volley.newRequestQueue(context)
+
+        val url = BASE_URL + "edit_message_mentor_chat.php" // Replace with your server URL
+
+        val stringRequest = object: StringRequest(
+            Method.POST, url,
+            Response.Listener<String> { response ->
+                // Handle response
+                Log.d(TAG, "Response: $response")
+                Toast.makeText(context, "Message edited successfully", Toast.LENGTH_SHORT).show()
+            },
+            Response.ErrorListener { error ->
+                // Handle error
+                Log.e(TAG, "Error editing message: ${error.message}")
+            }
+        ) {
+            override fun getParams(): Map<String, String> {
+                val params = HashMap<String, String>()
+                params["messageId"] = messageId
+                params["message"] = message
+                return params
+            }
+        }
+
+        // Add the request to the RequestQueue.
+        queue.add(stringRequest)
+    }
+
+    fun editMessageInCommunityChat(messageId: String, message: String) {
         val queue = Volley.newRequestQueue(context)
 
         val url = BASE_URL + "edit_message_mentor_chat.php" // Replace with your server URL
@@ -1079,5 +1216,68 @@ class WebserviceHelper(private val context: Context) {
         queue.add(stringRequest)
     }
 
+    //fetch all users in community chat and return them with callback
 
+    fun fetchAllUsersInCommunityChat(chatId: String, callback: (List<User>) -> Unit) {
+        val url = BASE_URL + "fetch_all_users_in_community_chat.php"
+
+        val stringRequest = object : StringRequest(
+            Method.POST, url,
+            Response.Listener<String> { response ->
+                // Handle response
+                Log.d(TAG, "Response: $response")
+
+                try {
+                    val jsonObject = JSONObject(response)
+                    Log.d("FetchUsers", "Response: $jsonObject")
+                    if (jsonObject.has("status")) { // Check for "status"
+                            val usersJsonArray = jsonObject.getJSONArray("users")
+                            val users = mutableListOf<User>()
+                            for (i in 0 until usersJsonArray.length()) {
+                                val userJsonObject = usersJsonArray.getJSONObject(i)
+                                val user = User(
+                                    userJsonObject.getString("id"),
+                                    userJsonObject.getString("name"),
+                                    userJsonObject.getString("email"),
+                                    userJsonObject.getString("country"),
+                                    userJsonObject.getString("city"),
+                                    userJsonObject.getString("password"),
+                                    userJsonObject.getString("phone"),
+                                    BASE_URL + "Images/MentorMe/" + userJsonObject.getString("profilePictureUrl"),
+                                    BASE_URL + "Images/MentorMe/" + userJsonObject.getString("bannerImageUrl"),
+                                    userJsonObject.optString("fcmToken", "")
+                                )
+                                Log.d(
+                                    "FetchUsers",
+                                    "User Name: ${user.name} User ID: ${user.id} User Email: ${user.email} User Country: ${user.country} User City: ${user.city} User Password: ${user.password} User Phone: ${user.phone} User Profile Picture URL: ${user.profilePictureUrl} User Banner Image URL: ${user.bannerImageUrl}"
+                                )
+                                users.add(user)
+                            }
+
+                            callback(users)
+
+                    } else {
+                        callback(emptyList())
+                    }
+                } catch (e: JSONException) {
+                    e.printStackTrace()
+                    callback(emptyList())
+                }
+            },
+            Response.ErrorListener { error ->
+                // Handle error
+                Log.e(TAG, "Error fetching users: ${error.message}")
+                callback(emptyList())
+            }
+        ) {
+            override fun getParams(): Map<String, String> {
+                val params = HashMap<String, String>()
+                params["chatId"] = chatId
+                return params
+            }
+        }
+
+        // Add the request to the RequestQueue.
+        Volley.newRequestQueue(context).add(stringRequest)
+    }
 }
