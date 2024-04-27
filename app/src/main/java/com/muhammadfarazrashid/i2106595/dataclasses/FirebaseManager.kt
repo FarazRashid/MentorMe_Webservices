@@ -2,6 +2,7 @@ package com.muhammadfarazrashid.i2106595.dataclasses
 
 import android.app.Activity
 import android.content.ContentValues
+import android.content.Context
 import android.net.Uri
 import android.util.Log
 import androidx.activity.result.contract.ActivityResultContracts
@@ -14,6 +15,7 @@ import com.muhammadfarazrashid.i2106595.ChatAdapter
 import com.muhammadfarazrashid.i2106595.ChatMessage
 import com.muhammadfarazrashid.i2106595.Mentor
 import com.muhammadfarazrashid.i2106595.UserManager
+import com.muhammadfarazrashid.i2106595.managers.WebserviceHelper
 import io.agora.rtc2.Constants.MediaType
 import org.json.JSONObject
 import okhttp3.*
@@ -88,23 +90,10 @@ class FirebaseManager {
         userId: String,
         notification: String,
         notificationType: String,
+        context:Context
     ) {
-        val database = FirebaseDatabase.getInstance()
-        val notificationRef =
-            database.getReference("users").child(userId).child("notifications").push()
-
-        notificationRef.setValue(
-            mapOf(
-                "notification" to notification,
-                "notificationType" to notificationType,
-            )
-        )
-            .addOnSuccessListener {
-                Log.d(ContentValues.TAG, "Notification added successfully")
-            }
-            .addOnFailureListener { e ->
-                Log.e(ContentValues.TAG, "Failed to add notification: ${e.message}")
-            }
+        val webserviceHelper = WebserviceHelper(context)
+        webserviceHelper.addNotification(userId, notification, notificationType)
 
 
     }
@@ -117,23 +106,10 @@ class FirebaseManager {
         user_type: String,
         notification: String,
         notificationType: String,
+        context:Context
     ) {
-            val database = FirebaseDatabase.getInstance()
-            val notificationRef =
-                database.getReference(user_type).child(userId).child("notifications").push()
-
-            notificationRef.setValue(
-                mapOf(
-                    "notification" to notification,
-                    "notificationType" to notificationType,
-                )
-            )
-                .addOnSuccessListener {
-                    Log.d(ContentValues.TAG, "Notification added successfully")
-                }
-                .addOnFailureListener { e ->
-                    Log.e(ContentValues.TAG, "Failed to add notification: ${e.message}")
-                }
+        val webserviceHelper = WebserviceHelper(context)
+        webserviceHelper.addNotification(userId, notification, notificationType)
 
     }
 
@@ -141,9 +117,10 @@ class FirebaseManager {
         userIds: List<String>,
         notification: String,
         notificationType: String,
+        context:Context
     ) {
         userIds.forEach { userId ->
-            addNotificationToUser(userId, notification, notificationType)
+            addNotificationToUser(userId, notification, notificationType,context)
         }
     }
 

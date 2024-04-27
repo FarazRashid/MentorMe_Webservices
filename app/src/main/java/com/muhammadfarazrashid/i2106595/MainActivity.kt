@@ -8,6 +8,7 @@ import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import com.muhammadfarazrashid.i2106595.Mentor.OnMentorListener
 import com.muhammadfarazrashid.i2106595.dataclasses.NotificationsManager
+import com.muhammadfarazrashid.i2106595.managers.WebserviceHelper
 
 class MainActivity : AppCompatActivity() {
 
@@ -25,11 +26,12 @@ class MainActivity : AppCompatActivity() {
 
             Log.d("MainActivity", "Extras: $userId, $chatType, $chatId")
 
+            val webserviceHelper = WebserviceHelper(this)
 
             if(chatType=="mentor_chats")
             {
-                Mentor.getMentorById(userId, object : OnMentorListener {
-                    override fun onSuccess(fetchedMentor: Mentor) {
+                if (userId != null) {
+                    webserviceHelper.getMentorById(userId) {Mentor->
                         // Set mentor when fetched successfully
                         val intent = Intent(
                             this@MainActivity,
@@ -39,24 +41,21 @@ class MainActivity : AppCompatActivity() {
                         val intentMain=Intent(this@MainActivity,mainChatActivity::class.java)
                         intentMain.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
                         startActivity(intentMain)
-                        Log.d("MainActivity", "Mentor: $fetchedMentor")
-                        intent.putExtra("mentor", fetchedMentor)
+                        Log.d("MainActivity", "Mentor: $Mentor")
+                        intent.putExtra("mentor", Mentor)
                         startActivity(intent)
 
-                    }
 
-                    override fun onFailure(errorMessage: String) {
-                        // Handle failure to fetch mentor details
-                        Log.e("AllMessagesChat", "Failed to fetch mentor details: $errorMessage")
                     }
-                })
+                }
 
             }
 
             else if(chatType=="community_chats")
             {
-                Mentor.getMentorById(chatId, object : OnMentorListener {
-                    override fun onSuccess(fetchedMentor: Mentor) {
+                if (chatId != null) {
+                    webserviceHelper.getMentorById(chatId) {
+
                         // Set mentor when fetched successfully
                         val intent = Intent(
                             this@MainActivity,
@@ -65,16 +64,12 @@ class MainActivity : AppCompatActivity() {
                         val intentMain=Intent(this@MainActivity,mainChatActivity::class.java)
                         intentMain.setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
                         startActivity(intentMain)
-                        intent.putExtra("mentor", fetchedMentor)
+                        intent.putExtra("mentor", it)
                         startActivity(intent)
 
-                    }
 
-                    override fun onFailure(errorMessage: String) {
-                        // Handle failure to fetch mentor details
-                        Log.e("AllMessagesChat", "Failed to fetch mentor details: $errorMessage")
                     }
-                })
+                }
 
             }
         }

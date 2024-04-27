@@ -707,7 +707,7 @@ class MentorChatActivity : AppCompatActivity(), ScreenshotDetectionDelegate.Scre
         Log.d("MentorChatActivity", "Screenshot captured with denied permission")
         requestReadExternalStoragePermission()
         var firebaseManager = FirebaseManager()
-        firebaseManager.addNotificationToOtherUserInMentorChat(currentMentor.id, "Mentors","Screenshot taken by ${UserManager.getCurrentUser()?.id}", "Screenshot taken")
+        firebaseManager.addNotificationToOtherUserInMentorChat(currentMentor.id, "Mentors","Screenshot taken by ${UserManager.getCurrentUser()?.id}", "Screenshot taken",this)
 
     }
 

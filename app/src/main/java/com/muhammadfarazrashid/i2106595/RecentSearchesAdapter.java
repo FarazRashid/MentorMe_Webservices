@@ -72,7 +72,6 @@ public class RecentSearchesAdapter extends RecyclerView.Adapter<RecentSearchesAd
 
     public void removeRecentSearch(int position) {
         if (position >= 0 && position < recentSearchesList.size()) {
-            FirebaseManager firebaseManager = new FirebaseManager();
 
             recentSearchesList.remove(position);
             notifyItemRemoved(position);

@@ -1,5 +1,6 @@
 package com.muhammadfarazrashid.i2106595;
 
+import android.content.Context;
 import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -11,6 +12,8 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
+import com.muhammadfarazrashid.i2106595.managers.WebserviceHelper;
+
 import android.net.Uri;
 
 public class Mentor implements Parcelable {
@@ -192,30 +195,7 @@ public class Mentor implements Parcelable {
         });
     }
 
-    public static void getMentorById(String mentorId, final OnMentorListener listener) {
-        FirebaseDatabase db = FirebaseDatabase.getInstance();
-        DatabaseReference mentorRef = db.getReference().child("Mentors").child(mentorId);
 
-        mentorRef.get().addOnSuccessListener(snapshot -> {
-            if (snapshot.exists()) {
-                String name = snapshot.child("name").getValue(String.class);
-                String position = snapshot.child("position").getValue(String.class);
-                String availability = snapshot.child("availability").getValue(String.class);
-                String salary = snapshot.child("salary").getValue(String.class);
-                String description = snapshot.child("description").getValue(String.class);
-                String profilePictureUrl = snapshot.child("profilePictureUrl").getValue(String.class);
-
-                // Create a new Mentor object with the retrieved fields
-                Mentor mentor = new Mentor(mentorId, name, position, availability, salary, description,profilePictureUrl);
-
-                listener.onSuccess(mentor);
-            } else {
-                listener.onFailure("Mentor not found");
-            }
-        }).addOnFailureListener(e -> {
-            listener.onFailure(e.getMessage());
-        });
-    }
 
     public interface OnMentorListener {
         void onSuccess(Mentor mentor);

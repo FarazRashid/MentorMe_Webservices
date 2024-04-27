@@ -783,13 +783,13 @@ class communityChatActivity : AppCompatActivity(), ScreenshotDetectionDelegate.S
         Log.d("MentorChatActivity", "Screenshot captured with denied permission")
         requestReadExternalStoragePermission()
         var firebaseManager = FirebaseManager()
-        firebaseManager.addNotificationToOtherUserInMentorChat(currentMentor.id, "Mentors","Screenshot taken by ${UserManager.getCurrentUser()?.name}", "Screenshot taken")
+        firebaseManager.addNotificationToOtherUserInMentorChat(currentMentor.id, "Mentors","Screenshot taken by ${UserManager.getCurrentUser()?.name}", "Screenshot taken",this)
         //get list of user ids
         val userIds = ArrayList<String>()
         for(user in listOfUsers){
             userIds.add(user.id)
         }
-        firebaseManager.sendNotificationsToListOfUsers(userIds, "Screenshot taken by ${UserManager.getCurrentUser()?.name}", "Screenshot taken")
+        firebaseManager.sendNotificationsToListOfUsers(userIds, "Screenshot taken by ${UserManager.getCurrentUser()?.name}", "Screenshot taken",this)
 
         for(user in listOfUsers){
             FirebaseManager.sendNotification(UserManager.getCurrentUser()?.name.toString(),"Screenshot taken",currentMentor.id,user.fcmToken,"community_chats",user.name)

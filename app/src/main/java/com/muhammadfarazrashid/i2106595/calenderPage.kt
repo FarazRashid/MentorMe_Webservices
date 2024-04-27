@@ -12,10 +12,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
-import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.database.ValueEventListener
+import com.muhammadfarazrashid.i2106595.UserManager.getInstance
 import com.muhammadfarazrashid.i2106595.dataclasses.FirebaseManager
 import com.muhammadfarazrashid.i2106595.dataclasses.NotificationsManager.showNotification
 import com.muhammadfarazrashid.i2106595.managers.WebserviceHelper
@@ -165,6 +162,15 @@ class calendarPage : AppCompatActivity() {
                 showNotification(
                     applicationContext,
                     "Appointment Booked with ${currentMentor.name} for $dateString at $selectedTime",
+                )
+                UserManager.getCurrentUser()?.let { it1 -> webserviceHelper.addNotification(it1.id,"Appointment Booked with ${currentMentor.name} for $dateString at $selectedTime","Appointment") }
+                val firebaseManager = FirebaseManager()
+
+                firebaseManager.addNotificationToUser(
+                    getInstance().getCurrentUser()!!.id,
+                    "Mentor " + currentMentor.getName() + " has been added to your favorites",
+                    "Favourites",
+                    this
                 )
 
                 startActivity(intent)

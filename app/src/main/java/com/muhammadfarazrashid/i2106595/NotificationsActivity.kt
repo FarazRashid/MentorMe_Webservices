@@ -14,6 +14,7 @@ import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.muhammadfarazrashid.i2106595.dataclasses.FirebaseManager
+import com.muhammadfarazrashid.i2106595.managers.WebserviceHelper
 
 class NotificationsActivity : AppCompatActivity() {
 
@@ -59,36 +60,43 @@ class NotificationsActivity : AppCompatActivity() {
     private fun fetchAllUserNotifications() {
         val currentUser = UserManager.getCurrentUser()
         currentUser?.let { user ->
-            val myDatabase = FirebaseDatabase.getInstance().getReference("users").child(user.id).child("notifications")
-
-            myDatabase.addChildEventListener(object : ChildEventListener {
-                override fun onChildAdded(dataSnapshot: DataSnapshot, previousChildName: String?) {
-                    val notification = dataSnapshot.child("notification").value.toString()
-                    val notificationId= dataSnapshot.key.toString()
-                    notification.let {
-                        Log.d("NotificationsActivity", "Adding notification to list: $it")
-                        notificationsList.add(it)
-                        notificationsIdList.add(notificationId)
-                        notificationsAdapter.notifyDataSetChanged() // Notify adapter when new notification is added
-                    }
+//            val myDatabase = FirebaseDatabase.getInstance().getReference("users").child(user.id).child("notifications")
+            val webserviceHelper = WebserviceHelper(this)
+            webserviceHelper.getNotifications(currentUser.id){
+                notifications -> notifications.forEach {
+                    notificationsList.add(it.notification)
+                notificationsIdList.add(it.id)
+                notificationsAdapter.notifyDataSetChanged()
                 }
-
-                override fun onChildChanged(dataSnapshot: DataSnapshot, previousChildName: String?) {
-                    // Handle changes to notifications
-                }
-
-                override fun onChildRemoved(dataSnapshot: DataSnapshot) {
-                    // Handle removed notifications
-                }
-
-                override fun onChildMoved(dataSnapshot: DataSnapshot, previousChildName: String?) {
-                    // Handle moved notifications
-                }
-
-                override fun onCancelled(databaseError: DatabaseError) {
-                    // Handle database error
-                }
-            })
+            }
+//            myDatabase.addChildEventListener(object : ChildEventListener {
+//                override fun onChildAdded(dataSnapshot: DataSnapshot, previousChildName: String?) {
+//                    val notification = dataSnapshot.child("notification").value.toString()
+//                    val notificationId= dataSnapshot.key.toString()
+//                    notification.let {
+//                        Log.d("NotificationsActivity", "Adding notification to list: $it")
+//                        notificationsList.add(it)
+//                        notificationsIdList.add(notificationId)
+//                        notificationsAdapter.notifyDataSetChanged() // Notify adapter when new notification is added
+//                    }
+//                }
+//
+//                override fun onChildChanged(dataSnapshot: DataSnapshot, previousChildName: String?) {
+//                    // Handle changes to notifications
+//                }
+//
+//                override fun onChildRemoved(dataSnapshot: DataSnapshot) {
+//                    // Handle removed notifications
+//                }
+//
+//                override fun onChildMoved(dataSnapshot: DataSnapshot, previousChildName: String?) {
+//                    // Handle moved notifications
+//                }
+//
+//                override fun onCancelled(databaseError: DatabaseError) {
+//                    // Handle database error
+//                }
+//            })
         }
     }
 
@@ -107,14 +115,20 @@ class NotificationsActivity : AppCompatActivity() {
     private fun clearAllNotifications() {
         notificationsList.clear()
         notificationsAdapter.notifyDataSetChanged()
-        UserManager.getCurrentUser()?.let { FirebaseManager.removeAllNotificationsFromUser(it.id) }
+        UserManager.getCurrentUser()?.let {
+            val webserviceHelper = WebserviceHelper(this)
+            webserviceHelper.deleteAllMessagesOfUser(it.id)
+        }
     }
 
     private val onRemoveClickListener = RecentSearchesAdapter.OnRemoveClickListener { position ->
         notificationsAdapter.removeRecentSearch(position)
         Log.d("NotificationsActivity", "Removing notification at position $position from list ${notificationsIdList[position]}")
         UserManager.getCurrentUser()
-            ?.let { FirebaseManager.removeNotificationFromDatabase(it.id, notificationsIdList[position]) }
+            ?.let {
+                val webserviceHelper = WebserviceHelper(this)
+                webserviceHelper.deleteNotification(notificationsIdList[position])
+            }
 
     }
 }

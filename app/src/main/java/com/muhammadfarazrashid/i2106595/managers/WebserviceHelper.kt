@@ -1280,4 +1280,199 @@ class WebserviceHelper(private val context: Context) {
         // Add the request to the RequestQueue.
         Volley.newRequestQueue(context).add(stringRequest)
     }
+
+    //add notifications to user
+
+    fun addNotification(userId: String, notificationMessage: String,notificationType:String) {
+        val queue = Volley.newRequestQueue(context)
+
+        val url = BASE_URL + "add_notification.php" // Replace with your server URL
+
+        val stringRequest = object: StringRequest(
+            Method.POST, url,
+            Response.Listener<String> { response ->
+                // Handle response
+                Log.d(TAG, "Response: $response")
+                Toast.makeText(context, "Notification added successfully", Toast.LENGTH_SHORT).show()
+            },
+            Response.ErrorListener { error ->
+                // Handle error
+                Log.e(TAG, "Error adding notification: ${error.message}")
+            }
+        ) {
+            override fun getParams(): Map<String, String> {
+                val params = HashMap<String, String>()
+                params["id"] = UUID.randomUUID().toString()
+                params["userId"] = userId
+                params["notification"] = notificationMessage
+                params["notificationType"]= notificationType
+                return params
+            }
+        }
+
+        // Add the request to the RequestQueue.
+        queue.add(stringRequest)
+    }
+
+    fun getNotifications(userId: String, callback: (List<Notification>) -> Unit) {
+        val url = BASE_URL + "get_notifications.php"
+
+        val stringRequest = object : StringRequest(
+            Method.POST, url,
+            Response.Listener<String> { response ->
+                // Handle response
+                Log.d(TAG, "Response: $response")
+
+                try {
+                    val jsonObject = JSONObject(response)
+                    if (jsonObject.has("status")) {
+                        val notificationsArray = jsonObject.getJSONArray("notifications")
+                        val notifications = mutableListOf<Notification>()
+                        for (i in 0 until notificationsArray.length()) {
+                            val notificationObject = notificationsArray.getJSONObject(i)
+                            val notification = Notification(
+                                notificationObject.getString("id"),
+                                notificationObject.getString("userId"),
+                                notificationObject.getString("notification"),
+                                notificationObject.getString("notificationType")
+                            )
+                            notifications.add(notification)
+                        }
+                        callback(notifications)
+                    } else {
+                        callback(emptyList())
+                    }
+                } catch (e: JSONException) {
+                    Log.e(TAG, "JSON parsing error: ${e.message}")
+                    callback(emptyList())
+                }
+            },
+            Response.ErrorListener { error ->
+                // Handle error
+                Log.e(TAG, "Error getting notifications: ${error.message}")
+                callback(emptyList())
+            }
+        ) {
+            override fun getParams(): Map<String, String> {
+                val params = HashMap<String, String>()
+                params["userId"] = userId
+                return params
+            }
+        }
+
+        // Add the request to the RequestQueue.
+        Volley.newRequestQueue(context).add(stringRequest)
+    }
+
+    //delete notification
+
+    fun deleteNotification(notificationId: String) {
+        val queue = Volley.newRequestQueue(context)
+
+        val url = BASE_URL + "delete_notification.php" // Replace with your server URL
+
+        val stringRequest = object: StringRequest(
+            Method.POST, url,
+            Response.Listener<String> { response ->
+                // Handle response
+                Log.d(TAG, "Response: $response")
+                Toast.makeText(context, "Notification deleted successfully", Toast.LENGTH_SHORT).show()
+            },
+            Response.ErrorListener { error ->
+                // Handle error
+                Log.e(TAG, "Error deleting notification: ${error.message}")
+            }
+        ) {
+            override fun getParams(): Map<String, String> {
+                val params = HashMap<String, String>()
+                params["id"] = notificationId
+                return params
+            }
+        }
+
+        // Add the request to the RequestQueue.
+        queue.add(stringRequest)
+    }
+
+    //delete all messages of user
+
+    fun deleteAllMessagesOfUser(userId: String) {
+        val queue = Volley.newRequestQueue(context)
+
+        val url = BASE_URL + "delete_all_notifcations_of_user.php" // Replace with your server URL
+
+        val stringRequest = object: StringRequest(
+            Method.POST, url,
+            Response.Listener<String> { response ->
+                // Handle response
+                Log.d(TAG, "Response: $response")
+                Toast.makeText(context, "All messages deleted successfully", Toast.LENGTH_SHORT).show()
+            },
+            Response.ErrorListener { error ->
+                // Handle error
+                Log.e(TAG, "Error deleting all messages: ${error.message}")
+            }
+        ) {
+            override fun getParams(): Map<String, String> {
+                val params = HashMap<String, String>()
+                params["userId"] = userId
+                return params
+            }
+        }
+
+        // Add the request to the RequestQueue.
+        queue.add(stringRequest)
+    }
+
+    //get mentor by id without a parseresponsetomentor
+
+    fun getMentorById(mentorId: String, callback: (Mentor?) -> Unit) {
+        val queue = Volley.newRequestQueue(context)
+
+        val url = BASE_URL + "get_mentor_by_id.php" // Replace with your server URL
+
+        val stringRequest = object: StringRequest(
+            Method.POST, url,
+            Response.Listener<String> { response ->
+                val jsonObject = JSONObject(response)
+                Log.d(TAG, "Response: $response")
+                val mentor=Mentor(
+                    mentorId,
+                    jsonObject.getString("name"),
+                    jsonObject.getString("position"),
+                    jsonObject.getString("availability"),
+                    jsonObject.getString("salary"),
+                    jsonObject.getString("description"),
+                    BASE_URL + "Images/MentorMe/" + jsonObject.getString("profilePictureUrl")
+                )
+                callback(mentor)
+            },
+            Response.ErrorListener { error ->
+                // Handle error
+                Log.e(TAG, "Error getting mentor by id: ${error.message}")
+                callback(null)
+            }
+        ) {
+            override fun getParams(): Map<String, String> {
+                val params = HashMap<String, String>()
+                params["id"] = mentorId
+                return params
+            }
+        }
+
+        // Add the request to the RequestQueue.
+        queue.add(stringRequest)
+    }
+
+
+
+
+
+    data class Notification(
+        val id: String,
+        val userId: String,
+        val notification: String,
+        val notificationType: String
+    )
+
 }

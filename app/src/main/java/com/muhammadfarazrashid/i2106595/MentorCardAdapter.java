@@ -101,13 +101,13 @@ public class MentorCardAdapter extends RecyclerView.Adapter<MentorCardAdapter.Vi
                     NotificationsManager.showNotification(view.getContext(), "Mentor " +mentor.getName() + " has been added to your favorites");
                     FirebaseManager firebaseManager = new FirebaseManager();
 
-                    firebaseManager.addNotificationToUser(UserManager.getInstance().getCurrentUser().getId(), "Mentor " +mentor.getName() + " has been added to your favorites", "Favourites");
+                    firebaseManager.addNotificationToUser(UserManager.getInstance().getCurrentUser().getId(), "Mentor " +mentor.getName() + " has been added to your favorites", "Favourites", inflater.getContext());
                 } else {
                     holder.heartButton.setImageResource(R.drawable.heart);
                     // Remove mentor from favorites
                     NotificationsManager.showNotification(view.getContext(), "Mentor " +mentor.getName() + " has been removed from your favorites");
                     FirebaseManager firebaseManager = new FirebaseManager();
-                    firebaseManager.addNotificationToUser(UserManager.getInstance().getCurrentUser().getId(), "Mentor " +mentor.getName() + " has been added to your favorites", "Favourites");
+                    firebaseManager.addNotificationToUser(UserManager.getInstance().getCurrentUser().getId(), "Mentor " +mentor.getName() + " has been added to your favorites", "Favourites", inflater.getContext());
                     removeFavoriteMentor(mentor.getId());
                 }
             }
