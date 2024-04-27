@@ -2,6 +2,9 @@ package com.muhammadfarazrashid.i2106595.managers
 
 import android.content.ContentValues.TAG
 import android.content.Context
+import android.graphics.Bitmap
+import android.net.Uri
+import android.util.Base64
 import android.util.Log
 import android.widget.Toast
 import com.android.volley.Request
@@ -20,6 +23,7 @@ import com.muhammadfarazrashid.i2106595.dataclasses.User
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 import java.util.UUID
 
 //using volley
@@ -1000,7 +1004,80 @@ class WebserviceHelper(private val context: Context) {
         queue.add(stringRequest)
     }
 
+    //write function to upload file to the server, by first converting it to base64 string and then uploading it
+    // the user will pass a "image_type" as a parameter to specify the type of image being uploaded
+    //e.g imageUrl, voiceMemoUrl, videoUrl, documentUrl etc.
+    //after the file has been succesfully uploaded, the message will be sent to the mentor chat with the file url
 
+    private fun encodeFileToBase64(fileUri: Uri): String {
+        val inputStream = context.contentResolver.openInputStream(fileUri)
+        val bytes = ByteArrayOutputStream()
+        val buffer = ByteArray(1024)
+        var bytesRead: Int
+        while (inputStream?.read(buffer).also { bytesRead = it!! } != -1) {
+            bytes.write(buffer, 0, bytesRead)
+        }
+        val base64 = Base64.encodeToString(bytes.toByteArray(), Base64.DEFAULT)
+        inputStream?.close()
+        return base64
+    }
+
+    fun uploadFileToServer(fileType: String, fileUri: Uri, callback: (Boolean, String?) -> Unit) {
+        val url = BASE_URL + "upload_file_to_server.php"
+        val queue = Volley.newRequestQueue(context)
+
+        val stringRequest = object : StringRequest(
+            Request.Method.POST, url,
+            Response.Listener { response ->
+                // Handle successful response
+                Toast.makeText(context, "File uploaded successfully", Toast.LENGTH_SHORT).show()
+                Log.d("API Response", response)
+
+                // Extract file URL from response
+                val jsonResponse = JSONObject(response)
+                val success = jsonResponse.getBoolean("success")
+                var fileUrl = if (success) jsonResponse.getString("fileUrl") else null
+                Log.d("API Response", "File URL: $fileUrl")
+                // Notify the callback with success and file URL
+                fileUrl= BASE_URL  + fileUrl
+                callback(success, fileUrl)
+            },
+            Response.ErrorListener { error ->
+                // Handle error
+                Log.e("API Error", "Error occurred: ${error.message}")
+
+                // Notify the callback that insertion failed
+                callback(false, null)
+            }) {
+            override fun getParams(): MutableMap<String, String> {
+                val params = HashMap<String, String>()
+                when (fileType) {
+                    "image" -> {
+                        val encodedImage = encodeFileToBase64(fileUri)
+                        params["file"] = encodedImage
+                        params["file_type"] = "image"
+                    }
+                    "audio" -> {
+                        val encodedAudio = encodeFileToBase64(fileUri)
+                        params["file"] = encodedAudio
+                        params["file_type"] = "audio"
+                    }
+                    "video" -> {
+                        val encodedVideo = encodeFileToBase64(fileUri)
+                        params["file"] = encodedVideo
+                        params["file_type"] = "video"
+                    }
+                    "document" -> {
+                        val encodedDocument = encodeFileToBase64(fileUri)
+                        params["file"] = encodedDocument
+                        params["file_type"] = "document"
+                    }
+                }
+                return params
+            }
+        }
+        queue.add(stringRequest)
+    }
 
 
 }

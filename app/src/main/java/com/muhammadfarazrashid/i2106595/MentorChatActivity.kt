@@ -206,7 +206,16 @@ class MentorChatActivity : AppCompatActivity(), ScreenshotDetectionDelegate.Scre
                         "onFinishRecord - Recorded Time is: " + time + " File saved at " + recordFile!!.path,
                         Toast.LENGTH_SHORT
                     ).show()
-                    FirebaseManager.sendImageToStorage(Uri.fromFile(recordFile), chatId, "mentor_chats", chatAdapter, "chat_audios")
+                    val webserviceHelper = WebserviceHelper(this@MentorChatActivity)
+                    webserviceHelper.uploadFileToServer("audio", Uri.fromFile(recordFile)){ bool,url->
+                        Toast.makeText(this@MentorChatActivity, "Audio uploaded", Toast.LENGTH_SHORT).show()
+                        val currentTime= SimpleDateFormat("HH:mm a").format(Date())
+                        webserviceHelper.sendMessageInMentorChat(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, currentMentor.getprofilePictureUrl(), "", "", url, ""), currentMentor)
+                        chatAdapter.addMessage(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, currentMentor.getprofilePictureUrl(), "", "", url, ""))
+
+                    }
+
+//                    FirebaseManager.sendImageToStorage(Uri.fromFile(recordFile), chatId, "mentor_chats", chatAdapter, "chat_audios")
                     Log.d("RecordView", "onFinish Limit Reached? $limitReached")
                     if (time != null) {
                         Log.d("RecordTime", time)
@@ -381,7 +390,17 @@ class MentorChatActivity : AppCompatActivity(), ScreenshotDetectionDelegate.Scre
         if (result.resultCode == Activity.RESULT_OK) {
             selectedImageUri = result.data?.data ?: return@registerForActivityResult
             // Send the image to the chat
-            FirebaseManager.sendImageToStorage(selectedImageUri, chatId, "mentor_chats",chatAdapter,"chat_images")
+
+            val webserviceHelper = WebserviceHelper(this)
+            webserviceHelper.uploadFileToServer("image",selectedImageUri){bool,url->
+                Toast.makeText(this, "Image uploaded", Toast.LENGTH_SHORT).show()
+                val currentTime= SimpleDateFormat("HH:mm a").format(Date())
+                webserviceHelper.sendMessageInMentorChat(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, currentMentor.getprofilePictureUrl(), url, "", "", ""), currentMentor)
+                chatAdapter.addMessage(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, currentMentor.getprofilePictureUrl(), url, "", "", ""))
+
+            }
+
+//            FirebaseManager.sendImageToStorage(selectedImageUri, chatId, "mentor_chats",chatAdapter,"chat_images")
         }
     }
 
@@ -396,14 +415,67 @@ class MentorChatActivity : AppCompatActivity(), ScreenshotDetectionDelegate.Scre
         if (result.resultCode == Activity.RESULT_OK) {
             val selectedFileUri = result.data?.data ?: return@registerForActivityResult
             val fileType = getFileType(selectedFileUri)
+            val webserviceHelper = WebserviceHelper(this)
             if (fileType != null) {
 
                 when (fileType) {
-                    FileType.IMAGE -> FirebaseManager.sendImageToStorage(selectedFileUri, chatId, "mentor_chats", chatAdapter, "chat_images")
-                    FileType.VIDEO -> FirebaseManager.sendImageToStorage(selectedFileUri, chatId, "mentor_chats", chatAdapter, "chat_videos")
-                    FileType.PDF -> FirebaseManager.sendImageToStorage(selectedFileUri, chatId, "mentor_chats", chatAdapter, "chat_documents")
-                    FileType.AUDIO -> FirebaseManager.sendImageToStorage(selectedFileUri, chatId, "mentor_chats", chatAdapter, "chat_audio")
-                }
+                    FileType.IMAGE -> {
+                        webserviceHelper.uploadFileToServer("image", selectedFileUri) {bool,url->
+                            Toast.makeText(this, "Image uploaded", Toast.LENGTH_SHORT).show()
+                            val currentTime= SimpleDateFormat("HH:mm a").format(Date())
+                            webserviceHelper.sendMessageInMentorChat(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, currentMentor.getprofilePictureUrl(), url, "", "", ""), currentMentor)
+                            chatAdapter.addMessage(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, currentMentor.getprofilePictureUrl(), url, "", "", ""))
+                        }
+//                        FirebaseManager.sendImageToStorage(selectedFileUri, chatId, "mentor_chats", chatAdapter, "chat_images")
+                    }
+
+                    FileType.VIDEO -> {
+                        webserviceHelper.uploadFileToServer("video", selectedFileUri) {bool,url->
+                            Toast.makeText(this, "Video uploaded", Toast.LENGTH_SHORT).show()
+                            val currentTime= SimpleDateFormat("HH:mm a").format(Date())
+                            webserviceHelper.sendMessageInMentorChat(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, currentMentor.getprofilePictureUrl(), "", url, "", ""), currentMentor)
+                            chatAdapter.addMessage(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, currentMentor.getprofilePictureUrl(), "", url, "", ""))
+
+                        }
+
+//                        FirebaseManager.sendImageToStorage(
+//                            selectedFileUri,
+//                            chatId,
+//                            "mentor_chats",
+//                            chatAdapter,
+//                            "chat_videos"
+//                        )
+                    }
+
+                    FileType.PDF ->
+                    {
+                        webserviceHelper.uploadFileToServer("pdf", selectedFileUri) {bool,url->
+                            Toast.makeText(this, "PDF uploaded", Toast.LENGTH_SHORT).show()
+                            val currentTime= SimpleDateFormat("HH:mm a").format(Date())
+                            webserviceHelper.sendMessageInMentorChat(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, currentMentor.getprofilePictureUrl(), "", "", "", url), currentMentor)
+                            chatAdapter.addMessage(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, currentMentor.getprofilePictureUrl(), "", "", "", url))
+                        }
+                    }
+
+//                        FirebaseManager.sendImageToStorage(selectedFileUri, chatId, "mentor_chats", chatAdapter, "chat_documents")
+                    FileType.AUDIO -> {
+                        webserviceHelper.uploadFileToServer("audio", selectedFileUri) {bool,url->
+                            Toast.makeText(this, "Audio uploaded", Toast.LENGTH_SHORT).show()
+                            val currentTime= SimpleDateFormat("HH:mm a").format(Date())
+                            webserviceHelper.sendMessageInMentorChat(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, currentMentor.getprofilePictureUrl(), "", "", url, ""), currentMentor)
+                            chatAdapter.addMessage(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, currentMentor.getprofilePictureUrl(), "", "", url, ""))
+                        }
+                    }
+
+//                        FirebaseManager.sendImageToStorage(
+//                            selectedFileUri,
+//                            chatId,
+//                            "mentor_chats",
+//                            chatAdapter,
+//                            "chat_audio"
+//                        )
+//                    }
+                    }
             } else {
 
                 Toast.makeText(this, "Unsupported file type", Toast.LENGTH_SHORT).show()
@@ -444,7 +516,13 @@ class MentorChatActivity : AppCompatActivity(), ScreenshotDetectionDelegate.Scre
             // Check if the result is from the PhotoActivity
             val photoUri = data?.getStringExtra("photoUri")
             if (photoUri != null) {
-                FirebaseManager.sendImageToStorage(Uri.parse(photoUri), chatId, "mentor_chats", chatAdapter, "chat_images")
+                val webserviceHelper = WebserviceHelper(this)
+                webserviceHelper.uploadFileToServer("image",Uri.parse(photoUri)){ bool,url->
+                    Toast.makeText(this, "Image uploaded", Toast.LENGTH_SHORT).show()
+                    val currentTime= SimpleDateFormat("HH:mm a").format(Date())
+                    webserviceHelper.sendMessageInMentorChat(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, currentMentor.getprofilePictureUrl(), url, "", "", ""), currentMentor)
+                }
+//                FirebaseManager.sendImageToStorage(Uri.parse(photoUri), chatId, "mentor_chats", chatAdapter, "chat_images")
             }
         }
     }
@@ -456,7 +534,14 @@ class MentorChatActivity : AppCompatActivity(), ScreenshotDetectionDelegate.Scre
             val photoUri = photoTakerManager.getInstance().getImageUrl()
             Log.d("MentorChatActivity", "onResume: isTakingPhoto=${photoTakerManager.getInstance().getIsTakingPhoto()}"
             )
-            FirebaseManager.sendImageToStorage(Uri.parse(photoUri), chatId, "mentor_chats", chatAdapter, "chat_images")
+            val webserviceHelper = WebserviceHelper(this)
+            webserviceHelper.uploadFileToServer("image",Uri.parse(photoUri)){ bool,string->
+                Toast.makeText(this, "Image uploaded", Toast.LENGTH_SHORT).show()
+                val currentTime= SimpleDateFormat("HH:mm a").format(Date())
+                webserviceHelper.sendMessageInMentorChat(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, mentorImageUrl, string, "", "", ""), currentMentor)
+                chatAdapter.addMessage(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, mentorImageUrl, string, "", "", ""))
+            }
+//            FirebaseManager.sendImageToStorage(Uri.parse(photoUri), chatId, "mentor_chats", chatAdapter, "chat_images")
             photoTakerManager.getInstance().setImageUrl("")
         }
     }
