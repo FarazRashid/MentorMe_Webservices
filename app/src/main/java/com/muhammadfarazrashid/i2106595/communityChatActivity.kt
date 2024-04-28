@@ -1,13 +1,16 @@
 package com.muhammadfarazrashid.i2106595
 
+import CommunityChatMessagesDBHelper
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ContentValues.TAG
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.drawable.Drawable
+import android.net.ConnectivityManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -43,6 +46,7 @@ import com.google.firebase.database.ValueEventListener
 import com.google.firebase.storage.FirebaseStorage
 import com.muhammadfarazrashid.i2106595.dataclasses.FirebaseManager
 import com.muhammadfarazrashid.i2106595.dataclasses.User
+import com.muhammadfarazrashid.i2106595.managers.NetworkChangeReceiver
 import com.muhammadfarazrashid.i2106595.managers.WebserviceHelper
 import com.muhammadfarazrashid.i2106595.managers.photoTakerManager
 import com.squareup.picasso.Picasso
@@ -75,6 +79,8 @@ class communityChatActivity : AppCompatActivity(), ScreenshotDetectionDelegate.S
     private var audioRecorder: AudioRecorder? = null
     private var recordFile: File? = null
 
+    private lateinit var dbHelper: CommunityChatMessagesDBHelper
+    private lateinit var networkChangeReceiver: NetworkChangeReceiver
     private val screenshotDetectionDelegate = ScreenshotDetectionDelegate(this, this)
 
     override fun onStart() {
@@ -85,6 +91,11 @@ class communityChatActivity : AppCompatActivity(), ScreenshotDetectionDelegate.S
     override fun onStop() {
         super.onStop()
         screenshotDetectionDelegate.stopScreenshotDetection()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        unregisterReceiver(networkChangeReceiver)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -100,6 +111,7 @@ class communityChatActivity : AppCompatActivity(), ScreenshotDetectionDelegate.S
         currentMentor = intent.getParcelableExtra<Mentor>("mentor")!!
         initViews()
         setMentorDetails(currentMentor)
+        dbHelper = CommunityChatMessagesDBHelper(this)
         listOfUsers= fetchAllUsersInCommunityChat()
         setButtonClickListeners()
         setBottomNavigationListener()
@@ -161,7 +173,7 @@ class communityChatActivity : AppCompatActivity(), ScreenshotDetectionDelegate.S
                 webserviceHelper.uploadFileToServer("audio", Uri.fromFile(recordFile)){ bool,url->
                     Toast.makeText(this@communityChatActivity, "Audio uploaded", Toast.LENGTH_SHORT).show()
                     val currentTime= SimpleDateFormat("HH:mm a").format(Date())
-                    webserviceHelper.sendMessageInCommunityChat(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, currentMentor.getprofilePictureUrl(), "", "", url, ""), currentMentor)
+                    webserviceHelper.sendMessageInCommunityChat(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, currentMentor.getprofilePictureUrl(), "", "", url, ""), currentMentor.id)
                     chatAdapter.addMessage(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, currentMentor.getprofilePictureUrl(), "", "", url, ""))
 
                 }
@@ -255,6 +267,10 @@ class communityChatActivity : AppCompatActivity(), ScreenshotDetectionDelegate.S
             FirebaseManager.sendImageToStorage(Uri.parse(photoUri), currentMentor.id, "mentor_chats", chatAdapter, "chat_images")
             photoTakerManager.getInstance().setImageUrl("")
         }
+
+        networkChangeReceiver = NetworkChangeReceiver()
+        registerReceiver(networkChangeReceiver, IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION))
+
     }
 
     private fun setMentorDetails(mentor: Mentor) {
@@ -359,10 +375,6 @@ class communityChatActivity : AppCompatActivity(), ScreenshotDetectionDelegate.S
         }
     }
 
-
-
-
-
     private fun sendMessage() {
         val message = messageField.text.toString()
         val currentTime = java.text.SimpleDateFormat("HH:mm a").format(java.util.Date())
@@ -376,9 +388,41 @@ class communityChatActivity : AppCompatActivity(), ScreenshotDetectionDelegate.S
             } else {
                 // Add a new message to the database
                 val currentUserName=UserManager.getCurrentUser()?.name
-                val webserviceHelper = WebserviceHelper(this)
                 var messageId= UUID.randomUUID().toString()
-                webserviceHelper.sendMessageInCommunityChat(ChatMessage(messageId,message,currentTime,true,"","","","",""), currentMentor)
+
+                if(networkChangeReceiver.isOnline(this)) {
+                    val webserviceHelper = WebserviceHelper(this)
+                    webserviceHelper.sendMessageInCommunityChat(
+                        ChatMessage(
+                            messageId,
+                            message,
+                            currentTime,
+                            true,
+                            "",
+                            "",
+                            "",
+                            "",
+                            ""
+                        ), currentMentor.id
+                    )
+                }
+                else{
+                    dbHelper.sendMessageInCommunityChat(
+                        ChatMessage(
+                            messageId,
+                            message,
+                            currentTime,
+                            true,
+                            "",
+                            "",
+                            "",
+                            "",
+                            ""
+                        ), currentMentor.id,
+                        false
+                    )
+                }
+
 //                FirebaseManager.saveMessageToDatabase(message, currentTime, "community_chats",currentMentor.id , chatAdapter)
                 chatAdapter.addMessage(ChatMessage(messageId,message, currentTime, true, UserManager.getCurrentUser()?.profilePictureUrl ?: ""))
                 for (user in listOfUsers){
@@ -405,7 +449,7 @@ class communityChatActivity : AppCompatActivity(), ScreenshotDetectionDelegate.S
             webserviceHelper.uploadFileToServer("image",selectedImageUri){bool,url->
                 Toast.makeText(this, "Image uploaded", Toast.LENGTH_SHORT).show()
                 val currentTime= SimpleDateFormat("HH:mm a").format(Date())
-                webserviceHelper.sendMessageInCommunityChat(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, currentMentor.getprofilePictureUrl(), url, "", "", ""), currentMentor)
+                webserviceHelper.sendMessageInCommunityChat(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, currentMentor.getprofilePictureUrl(), url, "", "", ""), currentMentor.id)
                 chatAdapter.addMessage(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, currentMentor.getprofilePictureUrl(), url, "", "", ""))
 
             }
@@ -434,7 +478,7 @@ class communityChatActivity : AppCompatActivity(), ScreenshotDetectionDelegate.S
                         webserviceHelper.uploadFileToServer("image", selectedFileUri) {bool,url->
                             Toast.makeText(this, "Image uploaded", Toast.LENGTH_SHORT).show()
                             val currentTime= SimpleDateFormat("HH:mm a").format(Date())
-                            webserviceHelper.sendMessageInCommunityChat(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, currentMentor.getprofilePictureUrl(), url, "", "", ""), currentMentor)
+                            webserviceHelper.sendMessageInCommunityChat(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, currentMentor.getprofilePictureUrl(), url, "", "", ""), currentMentor.id)
                             chatAdapter.addMessage(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, currentMentor.getprofilePictureUrl(), url, "", "", ""))
                         }
 
@@ -452,7 +496,7 @@ class communityChatActivity : AppCompatActivity(), ScreenshotDetectionDelegate.S
                         webserviceHelper.uploadFileToServer("video", selectedFileUri) {bool,url->
                             Toast.makeText(this, "Video uploaded", Toast.LENGTH_SHORT).show()
                             val currentTime= SimpleDateFormat("HH:mm a").format(Date())
-                            webserviceHelper.sendMessageInCommunityChat(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, currentMentor.getprofilePictureUrl(), "", url, "", ""), currentMentor)
+                            webserviceHelper.sendMessageInCommunityChat(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, currentMentor.getprofilePictureUrl(), "", url, "", ""), currentMentor.id)
                             chatAdapter.addMessage(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, currentMentor.getprofilePictureUrl(), "", url, "", ""))
                         }
 
@@ -469,7 +513,7 @@ class communityChatActivity : AppCompatActivity(), ScreenshotDetectionDelegate.S
                         webserviceHelper.uploadFileToServer("document", selectedFileUri) {bool,url->
                             Toast.makeText(this, "Document uploaded", Toast.LENGTH_SHORT).show()
                             val currentTime= SimpleDateFormat("HH:mm a").format(Date())
-                            webserviceHelper.sendMessageInCommunityChat(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, currentMentor.getprofilePictureUrl(), "", "", "", url), currentMentor)
+                            webserviceHelper.sendMessageInCommunityChat(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, currentMentor.getprofilePictureUrl(), "", "", "", url), currentMentor.id)
                             chatAdapter.addMessage(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, currentMentor.getprofilePictureUrl(), "", "", "", url))
                         }
 
@@ -486,7 +530,7 @@ class communityChatActivity : AppCompatActivity(), ScreenshotDetectionDelegate.S
                             webserviceHelper.uploadFileToServer("audio", selectedFileUri) {bool,url->
                                 Toast.makeText(this, "Audio uploaded", Toast.LENGTH_SHORT).show()
                                 val currentTime= SimpleDateFormat("HH:mm a").format(Date())
-                                webserviceHelper.sendMessageInCommunityChat(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, currentMentor.getprofilePictureUrl(), "", "", url, ""), currentMentor)
+                                webserviceHelper.sendMessageInCommunityChat(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, currentMentor.getprofilePictureUrl(), "", "", url, ""), currentMentor.id)
                                 chatAdapter.addMessage(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, currentMentor.getprofilePictureUrl(), "", "", url, ""))
                             }
 
@@ -823,7 +867,7 @@ class communityChatActivity : AppCompatActivity(), ScreenshotDetectionDelegate.S
     }
 
     private fun showReadExternalStoragePermissionDeniedMessage() {
-//        Toast.makeText(this, "Read external storage permission has denied", Toast.LENGTH_SHORT)
+//           Toast.makeText(this, "Read external storage permission has denied", Toast.LENGTH_SHORT)
     }
 
     private fun scrollToBottom() {

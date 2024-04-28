@@ -839,7 +839,7 @@ class WebserviceHelper(private val context: Context) {
         queue.add(stringRequest)
     }
 
-    fun sendMessageInCommunityChat(message: ChatMessage,mentor:Mentor) {
+    fun sendMessageInCommunityChat(message: ChatMessage,mentorId:String) {
         val queue = Volley.newRequestQueue(context)
 
         val url = BASE_URL + "send_message_in_community_chat.php" // Replace with your server URL
@@ -858,7 +858,7 @@ class WebserviceHelper(private val context: Context) {
         ) {
             override fun getParams(): Map<String, String> {
                 val params = HashMap<String, String>()
-                params["chatId"] = mentor.id
+                params["chatId"] = mentorId
                 params["messageId"] = message.id
                 params["userId"] = UserManager.getCurrentUser()?.id ?: ""
                 params["time"] = message.time

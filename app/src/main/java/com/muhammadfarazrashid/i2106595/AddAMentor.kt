@@ -28,6 +28,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageReference
+import com.muhammadfarazrashid.i2106595.managers.MentorDatabaseHelper
 import com.muhammadfarazrashid.i2106595.managers.WebserviceHelper
 import java.io.ByteArrayOutputStream
 
@@ -222,7 +223,8 @@ class AddAMentor : AppCompatActivity() {
         val mentor = Mentor((mentorId), name.text.toString(), position.text.toString(), availabilitySpinner.selectedItem.toString(), sessionPrice.text.toString(), description.text.toString())
        val webserviceHelper = WebserviceHelper(this)
         selectedImage?.let { webserviceHelper.addMentor(mentor, it) }
-
+        val databaseHelper = MentorDatabaseHelper(this)
+        databaseHelper.addMentor(mentor)
 
     }
 }
