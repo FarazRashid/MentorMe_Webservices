@@ -1,5 +1,6 @@
 package com.muhammadfarazrashid.i2106595.managers
 
+import android.annotation.SuppressLint
 import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
@@ -20,6 +21,7 @@ class MentorDatabaseHelper(context: Context) :
         private const val KEY_SALARY = "salary"
         private const val KEY_DESCRIPTION = "description"
         private const val KEY_PROFILE_PICTURE_URL = "profilePictureUrl"
+        private const val KEY_IS_LIKED = "isLiked"
     }
 
     override fun onCreate(db: SQLiteDatabase) {
@@ -27,7 +29,9 @@ class MentorDatabaseHelper(context: Context) :
                 + KEY_ID + " TEXT PRIMARY KEY," + KEY_NAME + " TEXT,"
                 + KEY_POSITION + " TEXT," + KEY_AVAILABILITY + " TEXT,"
                 + KEY_SALARY + " TEXT," + KEY_DESCRIPTION + " TEXT,"
-                + KEY_PROFILE_PICTURE_URL + " TEXT" + ")")
+                + KEY_PROFILE_PICTURE_URL + " TEXT,"
+                + KEY_IS_LIKED  + "BOOLEAN"+
+                ")")
         db.execSQL(CREATE_MENTORS_TABLE)
     }
 
@@ -46,15 +50,17 @@ class MentorDatabaseHelper(context: Context) :
         contentValues.put(KEY_SALARY, mentor.salary)
         contentValues.put(KEY_DESCRIPTION, mentor.description)
         contentValues.put(KEY_PROFILE_PICTURE_URL, mentor.getprofilePictureUrl())
+        contentValues.put(KEY_IS_LIKED,false)
         val success = db.insert(TABLE_MENTORS, null, contentValues)
         db.close()
         return success
     }
 
+    @SuppressLint("Range")
     fun getMentor(id: String): Mentor? {
         val db = this.readableDatabase
         val cursor = db.query(
-            TABLE_MENTORS, arrayOf(KEY_ID, KEY_NAME, KEY_POSITION, KEY_AVAILABILITY, KEY_SALARY, KEY_DESCRIPTION, KEY_PROFILE_PICTURE_URL),
+            TABLE_MENTORS, arrayOf(KEY_ID, KEY_NAME, KEY_POSITION, KEY_AVAILABILITY, KEY_SALARY, KEY_DESCRIPTION, KEY_PROFILE_PICTURE_URL, KEY_IS_LIKED),
             "$KEY_ID=?", arrayOf(id), null, null, null, null
         )
         if (cursor != null && cursor.moveToFirst()) {
@@ -65,14 +71,17 @@ class MentorDatabaseHelper(context: Context) :
                 cursor.getString(3),
                 cursor.getString(4),
                 cursor.getString(5),
-                cursor.getString(6)
+                cursor.getString(6),
             )
+            val isLiked=  cursor.getString(cursor.getColumnIndex(KEY_IS_LIKED)).toBoolean()
+            mentor.isFavorite=true
             cursor.close()
             return mentor
         }
         return null
     }
 
+    @SuppressLint("Range")
     fun getAllMentors(): List<Mentor> {
         val mentors = ArrayList<Mentor>()
         val selectQuery = "SELECT  * FROM $TABLE_MENTORS"
@@ -89,6 +98,9 @@ class MentorDatabaseHelper(context: Context) :
                     cursor.getString(5),
                     cursor.getString(6)
                 )
+                val isLiked=  cursor.getString(cursor.getColumnIndex(KEY_IS_LIKED)).toBoolean()
+                mentor.isFavorite=true
+
                 mentors.add(mentor)
             } while (cursor.moveToNext())
         }
@@ -111,5 +123,19 @@ class MentorDatabaseHelper(context: Context) :
     fun deleteMentor(id: String): Int {
         val db = this.writableDatabase
         return db.delete(TABLE_MENTORS, "$KEY_ID = ?", arrayOf(id))
+    }
+
+    fun setMentorFavourite(mentorId:String, isFavourite:Boolean)
+    {
+        val db = this.writableDatabase
+        val contentValues = ContentValues()
+        contentValues.put(KEY_IS_LIKED, isFavourite)
+        val success = db.update(
+            TABLE_MENTORS,
+            contentValues,
+            "$KEY_ID=?",
+            arrayOf(mentorId)
+        )
+        db.close()
     }
 }

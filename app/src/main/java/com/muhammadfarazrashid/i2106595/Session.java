@@ -42,4 +42,20 @@ public class Session {
         return bookingTime;
     }
 
+    public String getBookingDate() {
+        return bookingDate;
+    }
+
+    public String getBookingTime() {
+        return bookingTime;
+    }
+
+    public void setBookingDate(String bookingDate) {
+        this.bookingDate = bookingDate;
+    }
+
+    public void setBookingTime(String bookingTime) {
+        this.bookingTime = bookingTime;
+    }
+
 }
