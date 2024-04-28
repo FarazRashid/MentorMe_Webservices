@@ -1,6 +1,8 @@
 package com.muhammadfarazrashid.i2106595
 
 import android.content.Intent
+import android.content.IntentFilter
+import android.net.ConnectivityManager
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
@@ -11,7 +13,9 @@ import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
+import com.muhammadfarazrashid.i2106595.managers.NetworkChangeReceiver
 import com.muhammadfarazrashid.i2106595.managers.WebserviceHelper
+import com.muhammadfarazrashid.i2106595.managers.communityChatsDBHelper
 import com.squareup.picasso.Picasso
 
 class aboutMentorPage : AppCompatActivity() {
@@ -23,9 +27,11 @@ class aboutMentorPage : AppCompatActivity() {
     private lateinit var currentMentor: Mentor
     private lateinit var rating: TextView
 
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.aboutmentorpage)
+
 
         // Retrieve Mentor object from intent extras
         val mentor = intent.getParcelableExtra<Mentor>("mentor")
@@ -104,7 +110,8 @@ class aboutMentorPage : AppCompatActivity() {
         val webserviceHelper= WebserviceHelper(this)
         UserManager.getCurrentUser()
             ?.let { webserviceHelper.registerForCommunityChat(it.id,currentMentor.id) }
-
+        val communityChats= communityChatsDBHelper(this)
+        communityChats.addChat(UserManager.getCurrentUser()!!.id,currentMentor.id)
     }
 
 
@@ -116,7 +123,7 @@ class aboutMentorPage : AppCompatActivity() {
 
     private fun navigateToCommunityChatPage(mentor: Mentor) {
         val intent = Intent(this, communityChatActivity::class.java)
-       registerForCommunityChat()
+        registerForCommunityChat()
         intent.putExtra("mentor",mentor)
         startActivity(intent)
     }

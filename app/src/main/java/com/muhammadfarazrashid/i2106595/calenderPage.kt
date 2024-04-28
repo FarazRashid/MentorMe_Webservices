@@ -20,6 +20,7 @@ import com.muhammadfarazrashid.i2106595.dataclasses.NotificationsManager.showNot
 import com.muhammadfarazrashid.i2106595.managers.BookingsDatabaseHelper
 import com.muhammadfarazrashid.i2106595.managers.NetworkChangeReceiver
 import com.muhammadfarazrashid.i2106595.managers.WebserviceHelper
+import com.muhammadfarazrashid.i2106595.managers.mentorChatsDBHelper
 import com.squareup.picasso.Picasso
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -111,6 +112,8 @@ class calendarPage : AppCompatActivity() {
         val webserviceHelper= WebserviceHelper(this)
         UserManager.getCurrentUser()
             ?.let { webserviceHelper.registerForMentorChat(it.id,currentMentor.id) }
+        val mentorChatsDBHelper = mentorChatsDBHelper(this)
+        UserManager.getCurrentUser()?.let { mentorChatsDBHelper.addChat(it.id,currentMentor.id) }
     }
 
     private fun navigateToChatPage(mentor: Mentor) {

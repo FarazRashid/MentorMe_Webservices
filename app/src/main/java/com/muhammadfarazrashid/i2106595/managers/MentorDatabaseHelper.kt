@@ -13,8 +13,8 @@ class MentorDatabaseHelper(context: Context) :
     companion object {
         private const val DATABASE_VERSION = 2
         private const val DATABASE_NAME = "MentorDatabase"
-        private const val TABLE_MENTORS = "Mentors"
-        private const val KEY_ID = "id"
+        const val TABLE_MENTORS = "Mentors"
+        const val KEY_ID = "id"
         private const val KEY_NAME = "name"
         private const val KEY_POSITION = "position"
         private const val KEY_AVAILABILITY = "availability"
