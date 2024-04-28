@@ -2,6 +2,8 @@ package com.muhammadfarazrashid.i2106595
 
 
 import android.content.Intent
+import android.content.IntentFilter
+import android.net.ConnectivityManager
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
@@ -15,6 +17,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.muhammadfarazrashid.i2106595.UserManager.getInstance
 import com.muhammadfarazrashid.i2106595.dataclasses.FirebaseManager
 import com.muhammadfarazrashid.i2106595.dataclasses.NotificationsManager.showNotification
+import com.muhammadfarazrashid.i2106595.managers.BookingsDatabaseHelper
+import com.muhammadfarazrashid.i2106595.managers.NetworkChangeReceiver
 import com.muhammadfarazrashid.i2106595.managers.WebserviceHelper
 import com.squareup.picasso.Picasso
 import java.text.SimpleDateFormat
@@ -34,10 +38,24 @@ class calendarPage : AppCompatActivity() {
     private var selectedTime: String = ""
     private var dateString: String= ""
 
+    private lateinit var networkChangeReceiver: NetworkChangeReceiver
+
+    override fun onPause() {
+        super.onPause()
+        unregisterReceiver(networkChangeReceiver)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        networkChangeReceiver = NetworkChangeReceiver()
+        registerReceiver(networkChangeReceiver, IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION))
+    }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.calenderpage)
+        networkChangeReceiver = NetworkChangeReceiver()
         currentMentor = intent.getParcelableExtra<Mentor>("mentor")!!
         initializeViews()
         setMentorDetails(currentMentor)
@@ -158,7 +176,12 @@ class calendarPage : AppCompatActivity() {
             if(checkFiels()){
                 val intent = Intent(this, homePageActivity::class.java)
                 val webserviceHelper= WebserviceHelper(this)
-                UserManager.getCurrentUser()?.let { it1 ->webserviceHelper.addBooking(it1.id,currentMentor.id,dateString,selectedTime) }
+                if(networkChangeReceiver.isOnline(this))
+                    UserManager.getCurrentUser()?.let { it1 ->webserviceHelper.addBooking(it1.id,currentMentor.id,dateString,selectedTime) }
+
+                val bookingsDatabaseHelper= BookingsDatabaseHelper(this)
+                UserManager.getCurrentUser()?.let { it1 -> bookingsDatabaseHelper.addBooking(it1.id,currentMentor.id,dateString,selectedTime) }
+
                 showNotification(
                     applicationContext,
                     "Appointment Booked with ${currentMentor.name} for $dateString at $selectedTime",

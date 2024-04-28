@@ -2,6 +2,8 @@ package com.muhammadfarazrashid.i2106595
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.content.IntentFilter
+import android.net.ConnectivityManager
 import android.os.Bundle
 import android.util.Log
 import android.view.MotionEvent
@@ -11,6 +13,8 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
+import com.muhammadfarazrashid.i2106595.managers.NetworkChangeReceiver
+import com.muhammadfarazrashid.i2106595.managers.ReviewDatabaseHelper
 import com.muhammadfarazrashid.i2106595.managers.WebserviceHelper
 import com.squareup.picasso.Picasso
 import org.w3c.dom.Text
@@ -29,6 +33,19 @@ class reviewpage: AppCompatActivity() {
     private var database = FirebaseDatabase.getInstance()
     private lateinit var reviewText : TextView
 
+    private lateinit var networkChangeReceiver: NetworkChangeReceiver
+
+    override fun onPause() {
+        super.onPause()
+        unregisterReceiver(networkChangeReceiver)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        networkChangeReceiver = NetworkChangeReceiver()
+        registerReceiver(networkChangeReceiver, IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION))
+    }
+
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -36,6 +53,8 @@ class reviewpage: AppCompatActivity() {
         setContentView(R.layout.reviewpage)
 
         val mentor = intent.getParcelableExtra<Mentor>("mentor")
+
+        networkChangeReceiver = NetworkChangeReceiver()
 
         // Log mentor details to verify if data is received correctly
         mentor?.let {
@@ -219,8 +238,10 @@ class reviewpage: AppCompatActivity() {
             val mentorId = currentMentor.id
 
             if (userId != null && mentorId != null) {
-                webserviceHelper.addReview(userId, mentorId, rating, reviewText)
-
+                if(networkChangeReceiver.isOnline(this))
+                    webserviceHelper.addReview(userId, mentorId, rating, reviewText)
+                var reviewDatabaseHelper= ReviewDatabaseHelper(this)
+                reviewDatabaseHelper.addReview(userId, mentorId, rating, reviewText)
                 // Navigate to the home page
                 val intent = Intent(this, homePageActivity::class.java)
                 startActivity(intent)

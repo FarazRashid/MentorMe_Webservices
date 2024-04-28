@@ -5,6 +5,7 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import com.muhammadfarazrashid.i2106595.ReviewItem
+import java.util.UUID
 
 class ReviewDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
@@ -45,8 +46,9 @@ class ReviewDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABAS
         // Create tables again
         onCreate(db)
     }
-    fun addReview(id: String, userId: String, mentorName: String, rating: Float, reviewText: String) {
+    fun addReview(userId: String, mentorName: String, rating: Float, reviewText: String) {
         val db = this.writableDatabase
+        var id = UUID.randomUUID().toString()
         val contentValues = ContentValues().apply {
             put(COLUMN_ID, id)
             put(COLUMN_USER_ID, userId)

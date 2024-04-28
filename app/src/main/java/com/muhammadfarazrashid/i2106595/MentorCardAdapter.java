@@ -26,6 +26,8 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 import com.muhammadfarazrashid.i2106595.dataclasses.NotificationsManager;
+import com.muhammadfarazrashid.i2106595.managers.MentorDatabaseHelper;
+import com.muhammadfarazrashid.i2106595.managers.NetworkChangeReceiver;
 import com.muhammadfarazrashid.i2106595.managers.WebserviceHelper;
 import com.squareup.picasso.Picasso;
 
@@ -47,7 +49,10 @@ public class MentorCardAdapter extends RecyclerView.Adapter<MentorCardAdapter.Vi
         this.inflater = LayoutInflater.from(context);
         this.data = data;
         this.layoutResourceId = layoutResourceId;
-        fetchUserFavorites();
+        NetworkChangeReceiver networkChangeReceiver = new NetworkChangeReceiver();
+        if(networkChangeReceiver.isOnline(context)){
+            fetchUserFavorites();
+        }
 
     }
 
@@ -87,6 +92,9 @@ public class MentorCardAdapter extends RecyclerView.Adapter<MentorCardAdapter.Vi
             Picasso.get().load(mentor.getprofilePictureUrl()).into(holder.mentorImage);
         }
 
+        NetworkChangeReceiver networkChangeReceiver = new NetworkChangeReceiver();
+        MentorDatabaseHelper mentorDatabaseHelper = new MentorDatabaseHelper(inflater.getContext());
+
         holder.heartButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -97,18 +105,32 @@ public class MentorCardAdapter extends RecyclerView.Adapter<MentorCardAdapter.Vi
                     // Set red color for filled heart
                     holder.heartButton.setImageResource(R.drawable.filled_heart);
                     // Add mentor as favorite
-                    addFavoriteMentor(mentor.getId());// Call sendNotification to display the notification
-                    NotificationsManager.showNotification(view.getContext(), "Mentor " +mentor.getName() + " has been added to your favorites");
-                    FirebaseManager firebaseManager = new FirebaseManager();
+                    if(networkChangeReceiver.isOnline(view.getContext())) {
+                        addFavoriteMentor(mentor.getId());// Call sendNotification to display the notification
+                        NotificationsManager.showNotification(view.getContext(), "Mentor " + mentor.getName() + " has been added to your favorites");
+                        FirebaseManager firebaseManager = new FirebaseManager();
 
-                    firebaseManager.addNotificationToUser(UserManager.getInstance().getCurrentUser().getId(), "Mentor " +mentor.getName() + " has been added to your favorites", "Favourites", inflater.getContext());
-                } else {
+                        firebaseManager.addNotificationToUser(UserManager.getInstance().getCurrentUser().getId(), "Mentor " + mentor.getName() + " has been added to your favorites", "Favourites", inflater.getContext());
+                        }
+                    else{
+                        mentorDatabaseHelper.setMentorFavourite(mentorId,true);
+                        NotificationsManager.showNotification(view.getContext(), "Mentor " + mentor.getName() + " has been added to your favorites");
+                        }
+                    }
+                else {
                     holder.heartButton.setImageResource(R.drawable.heart);
-                    // Remove mentor from favorites
-                    NotificationsManager.showNotification(view.getContext(), "Mentor " +mentor.getName() + " has been removed from your favorites");
-                    FirebaseManager firebaseManager = new FirebaseManager();
-                    firebaseManager.addNotificationToUser(UserManager.getInstance().getCurrentUser().getId(), "Mentor " +mentor.getName() + " has been added to your favorites", "Favourites", inflater.getContext());
-                    removeFavoriteMentor(mentor.getId());
+
+                    if(networkChangeReceiver.isOnline(view.getContext())) {
+                        // Remove mentor from favorites
+                        NotificationsManager.showNotification(view.getContext(), "Mentor " +mentor.getName() + " has been removed from your favorites");
+                        FirebaseManager firebaseManager = new FirebaseManager();
+                        firebaseManager.addNotificationToUser(UserManager.getInstance().getCurrentUser().getId(), "Mentor " +mentor.getName() + " has been added to your favorites", "Favourites", inflater.getContext());
+                        removeFavoriteMentor(mentor.getId());
+                    }
+                    else{
+                        mentorDatabaseHelper.setMentorFavourite(mentorId,false);
+                        NotificationsManager.showNotification(view.getContext(), "Mentor " +mentor.getName() + " has been removed from your favorites");
+                    }
                 }
             }
         });

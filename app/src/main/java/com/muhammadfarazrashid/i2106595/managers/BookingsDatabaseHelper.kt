@@ -24,7 +24,7 @@ class BookingsDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATAB
 
     override fun onCreate(db: SQLiteDatabase) {
         val CREATE_BOOKINGS_TABLE = ("CREATE TABLE " + TABLE_BOOKINGS + "("
-                + KEY_ID + "VARCHAR(100) PRIMARY KEY," + KEY_USER_ID + " VARCHAR(100),"
+                + KEY_ID + " VARCHAR(100) PRIMARY KEY," + KEY_USER_ID + " VARCHAR(100),"
                 + KEY_MENTOR_ID + " VARCHAR(100)," + KEY_BOOKING_DATE + " VARCHAR(50),"
                 + KEY_BOOKING_TIME + " VARCHAR(50)" + ")")
         db.execSQL(CREATE_BOOKINGS_TABLE)

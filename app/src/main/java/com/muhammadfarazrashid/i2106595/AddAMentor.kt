@@ -4,8 +4,10 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ClipDescription
 import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.net.ConnectivityManager
 import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -29,6 +31,7 @@ import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageReference
 import com.muhammadfarazrashid.i2106595.managers.MentorDatabaseHelper
+import com.muhammadfarazrashid.i2106595.managers.NetworkChangeReceiver
 import com.muhammadfarazrashid.i2106595.managers.WebserviceHelper
 import java.io.ByteArrayOutputStream
 
@@ -50,11 +53,25 @@ class AddAMentor : AppCompatActivity() {
     private var bitmap: Bitmap? = null
     private var selectedImage: String? = null // Variable to store base64 encoded image
 
+    private lateinit var networkChangeReceiver: NetworkChangeReceiver
+
+    override fun onPause() {
+        super.onPause()
+        unregisterReceiver(networkChangeReceiver)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        networkChangeReceiver = NetworkChangeReceiver()
+        registerReceiver(networkChangeReceiver, IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION))
+    }
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.addmentorpage)
+
+        networkChangeReceiver = NetworkChangeReceiver()
 
         uploadPhotoButton = findViewById(R.id.uploadPhotoButton)
         name = findViewById(R.id.userNameTextBox)
@@ -221,7 +238,7 @@ class AddAMentor : AppCompatActivity() {
         if(!verifyData()) return
 
         val mentor = Mentor((mentorId), name.text.toString(), position.text.toString(), availabilitySpinner.selectedItem.toString(), sessionPrice.text.toString(), description.text.toString())
-       val webserviceHelper = WebserviceHelper(this)
+        val webserviceHelper = WebserviceHelper(this)
         selectedImage?.let { webserviceHelper.addMentor(mentor, it) }
         val databaseHelper = MentorDatabaseHelper(this)
         databaseHelper.addMentor(mentor)

@@ -105,6 +105,7 @@ class communityChatActivity : AppCompatActivity(), ScreenshotDetectionDelegate.S
 
         initRecording()
 
+        networkChangeReceiver = NetworkChangeReceiver()
 
         recyclerView = findViewById(R.id.communityChatRecyclerView)
 

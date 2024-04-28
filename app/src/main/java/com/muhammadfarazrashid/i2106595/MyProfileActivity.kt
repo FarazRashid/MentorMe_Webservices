@@ -6,7 +6,9 @@ import android.content.ContentValues
 import android.content.ContentValues.TAG
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Bitmap
+import android.net.ConnectivityManager
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
@@ -32,6 +34,8 @@ import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageReference
 import com.muhammadfarazrashid.i2106595.dataclasses.User
+import com.muhammadfarazrashid.i2106595.managers.NetworkChangeReceiver
+import com.muhammadfarazrashid.i2106595.managers.ReviewDatabaseHelper
 import com.muhammadfarazrashid.i2106595.managers.WebserviceHelper
 import com.squareup.picasso.Callback
 import com.squareup.picasso.MemoryPolicy
@@ -59,12 +63,28 @@ class MyProfileActivity : AppCompatActivity() {
     private lateinit var logoutButton:ImageView
     private var selectedImage: String? = null // Variable to store base64 encoded image
 
+    private lateinit var networkChangeReceiver: NetworkChangeReceiver
+
+    override fun onPause() {
+        super.onPause()
+        unregisterReceiver(networkChangeReceiver)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        networkChangeReceiver = NetworkChangeReceiver()
+        registerReceiver(networkChangeReceiver, IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION))
+        loadUserInformationWithoutFirebase()
+    }
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_my_profile)
 
 
         Log.d(TAG, "onCreate: ${currentUser.id}")
+        networkChangeReceiver = NetworkChangeReceiver()
         initReviewRecyclerView()
         initViews()
         fetchReviewsData()
@@ -89,13 +109,31 @@ class MyProfileActivity : AppCompatActivity() {
         val userId = currentUser.id
         val webserviceHelper = WebserviceHelper(this)
 
-        webserviceHelper.getReviews(userId) { reviews ->
-            if (reviews != null) {
-                reviewAdapter.updateReviews(reviews)
-            } else {
-                Log.e("MyProfileActivity", "Error getting reviews")
+        if(networkChangeReceiver.isOnline(this))
+        {
+            webserviceHelper.getReviews(userId) { reviews ->
+                if (reviews != null) {
+                    for (review in reviews) {
+                        Log.d("MyProfileActivity", "Review Mentor name: ${review.name}, Review: ${review.reviewText}, Rating: ${review.rating}")
+                        reviewAdapter.addReview(review)
+                    }
+                } else {
+                    Log.e("MyProfileActivity", "Error getting reviews")
+                }
             }
         }
+        else
+        {
+            var reviewDatabaseHelper = ReviewDatabaseHelper(this)
+            reviewDatabaseHelper.getReviews(userId) { reviews ->
+                if (reviews != null) {
+                    reviewAdapter.updateReviews(reviews)
+                } else {
+                    Log.e("MyProfileActivity", "Error getting reviews")
+                }
+            }
+        }
+
     }
 
 
@@ -217,11 +255,6 @@ class MyProfileActivity : AppCompatActivity() {
         topMentorsRecycler.adapter = topMentorsAdapter
     }
 
-
-    override fun onResume() {
-        super.onResume()
-        loadUserInformationWithoutFirebase()
-    }
 
 
 

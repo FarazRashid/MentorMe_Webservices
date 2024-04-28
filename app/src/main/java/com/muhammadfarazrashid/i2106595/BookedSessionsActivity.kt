@@ -1,7 +1,9 @@
 package com.muhammadfarazrashid.i2106595
 
 import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.drawable.Drawable
+import android.net.ConnectivityManager
 import android.os.Bundle
 import android.util.Log
 import android.widget.ImageView
@@ -14,6 +16,8 @@ import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
+import com.muhammadfarazrashid.i2106595.managers.BookingsDatabaseHelper
+import com.muhammadfarazrashid.i2106595.managers.NetworkChangeReceiver
 import com.muhammadfarazrashid.i2106595.managers.WebserviceHelper
 
 class BookedSessionsActivity : AppCompatActivity() {
@@ -21,10 +25,24 @@ class BookedSessionsActivity : AppCompatActivity() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: SessionAdapter
 
+    private lateinit var networkChangeReceiver: NetworkChangeReceiver
+
+    override fun onPause() {
+        super.onPause()
+        unregisterReceiver(networkChangeReceiver)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        networkChangeReceiver = NetworkChangeReceiver()
+        registerReceiver(networkChangeReceiver, IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_booked_sessions)
 
+        networkChangeReceiver = NetworkChangeReceiver()
         recyclerView = findViewById(R.id.bookedSessionsRecycler)
         recyclerView.layoutManager = LinearLayoutManager(this)
 
@@ -39,8 +57,24 @@ class BookedSessionsActivity : AppCompatActivity() {
         val webserviceHelper = WebserviceHelper(this)
         val userId = UserManager.getCurrentUser()?.id
 
-        userId?.let {
-            webserviceHelper.getBookings(it) { sessions ->
+        if(networkChangeReceiver.isOnline(this)){
+            userId?.let {
+                webserviceHelper.getBookings(it) { sessions ->
+                    if (sessions != null) {
+                        // Get list of mentor IDs from sessions
+                        val mentorIds = sessions.map { session -> session.mentorId }
+                        setupMentors(sessions, mentorIds.toMutableList())
+                    } else {
+                        Log.e("BookedSessionsActivity", "Error getting sessions")
+                    }
+                }
+            }
+        } else {
+            Log.e("BookedSessionsActivity", "No internet connection")
+
+            var bookingsDatabaseHelper = BookingsDatabaseHelper(this)
+            userId?.let {
+                val sessions = bookingsDatabaseHelper.getBookings(it)
                 if (sessions != null) {
                     // Get list of mentor IDs from sessions
                     val mentorIds = sessions.map { session -> session.mentorId }

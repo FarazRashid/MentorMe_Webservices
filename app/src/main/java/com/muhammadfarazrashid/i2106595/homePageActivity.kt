@@ -1,6 +1,8 @@
 package com.muhammadfarazrashid.i2106595
 
 import android.content.Intent
+import android.content.IntentFilter
+import android.net.ConnectivityManager
 import android.os.Bundle
 import android.util.Log
 import android.widget.ImageView
@@ -14,6 +16,8 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.muhammadfarazrashid.i2106595.dataclasses.NotificationsManager
+import com.muhammadfarazrashid.i2106595.managers.MentorDatabaseHelper
+import com.muhammadfarazrashid.i2106595.managers.NetworkChangeReceiver
 import com.muhammadfarazrashid.i2106595.managers.WebserviceHelper
 
 class homePageActivity : AppCompatActivity() {
@@ -30,12 +34,27 @@ class homePageActivity : AppCompatActivity() {
     private val badges = ArrayList<Badge>()
     private lateinit var  nameText: TextView
 
+    private lateinit var networkChangeReceiver: NetworkChangeReceiver
+
     private val database: FirebaseDatabase = FirebaseDatabase.getInstance()
+
+    override fun onPause() {
+        super.onPause()
+        unregisterReceiver(networkChangeReceiver)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        networkChangeReceiver = NetworkChangeReceiver()
+        registerReceiver(networkChangeReceiver, IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION))
+    }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.home_page)
 
+        networkChangeReceiver = NetworkChangeReceiver()
         initViews()
         initMentors()
         initBadges()
@@ -68,6 +87,8 @@ class homePageActivity : AppCompatActivity() {
 
         val webserviceHelper = WebserviceHelper(this)
 
+        if(networkChangeReceiver.isOnline(this))
+        {
         webserviceHelper.getMentors { mentors ->
             if (mentors != null) {
                 Log.d("homePageActivity", "Fetched mentors: ${mentors.size}")
@@ -80,6 +101,14 @@ class homePageActivity : AppCompatActivity() {
                 Log.d("homePageActivity", "Failed to fetch mentors")
             }
 
+            }
+        }
+        else {
+            val mentorDatabaseHelper = MentorDatabaseHelper(this)
+            val mentors = mentorDatabaseHelper.getAllMentors()
+            setupMentorsRecycler(topMentorsRecycler, mentors)
+            setupMentorsRecycler(educationMentorsRecycler, mentors)
+            setupMentorsRecycler(recentMentorsRecycler, mentors)
         }
     }
 

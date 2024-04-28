@@ -579,6 +579,7 @@ class WebserviceHelper(private val context: Context) {
                             val reviewText = reviewObject.getString("reviewText")
                             val mentorName = reviewObject.getString("name") // Fetch mentor's name
                             val review = ReviewItem(mentorName, reviewText, rating) // Include mentor's name in ReviewItem
+                           Log.d("Review item fetch", "Mentor Name: ${review.name} Review Text: ${review.reviewText} Rating: ${review.rating}")
                             reviews.add(review)
                         }
                         callback(reviews)
