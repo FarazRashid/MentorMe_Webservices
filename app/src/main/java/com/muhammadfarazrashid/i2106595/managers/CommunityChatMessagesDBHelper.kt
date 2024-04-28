@@ -9,9 +9,14 @@ import android.util.Log
 import com.muhammadfarazrashid.i2106595.ChatMessage
 import com.muhammadfarazrashid.i2106595.UserManager
 import com.muhammadfarazrashid.i2106595.dataclasses.User
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.io.IOException
 
 class CommunityChatMessagesDBHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
+    private val context = context
     companion object {
         private const val DATABASE_NAME = "mentorme.db"
         private const val DATABASE_VERSION = 2
@@ -137,21 +142,52 @@ class CommunityChatMessagesDBHelper(context: Context) : SQLiteOpenHelper(context
 
     //give me sendmessage function with this signature     fun sendMessageInMentorChat(message: ChatMessage,mentor:Mentor) {
 
-    fun sendMessageInCommunityChat(message: ChatMessage, mentorId: String, isSent:Boolean) {
+    fun sendMessageInCommunityChat(message: ChatMessage, mentorId: String, isSent: Boolean) {
         val db = this.writableDatabase
-        val contentValues = ContentValues()
-        contentValues.put(COLUMN_CHAT_ID, mentorId)
-        contentValues.put(COLUMN_MESSAGE_ID, message.id)
-        contentValues.put(COLUMN_USER_ID, UserManager.getCurrentUser()?.id ?: "")
-        contentValues.put(COLUMN_TIME, message.time)
-        contentValues.put(COLUMN_MESSAGE, message.message)
-        contentValues.put(COLUMN_MESSAGE_IMAGE_URL, message.messageImageUrl)
-        contentValues.put(COLUMN_VIDEO_IMAGE_URL, message.videoImageUrl)
-        contentValues.put(COLUMN_VOICE_MEMO_URL, message.voiceMemoUrl)
-        contentValues.put(COLUMN_DOCUMENT_URL, message.documentUrl)
-        contentValues.put(COLUMN_SENT, isSent)
-        val success = db.insert(TABLE_COMMUNITY_CHAT_MESSAGES, null, contentValues)
-        db.close()
+        try {
+            val contentValues = ContentValues().apply {
+                put(COLUMN_CHAT_ID, mentorId)
+                put(COLUMN_MESSAGE_ID, message.id)
+                put(COLUMN_USER_ID, UserManager.getCurrentUser()?.id ?: "")
+                put(COLUMN_TIME, message.time)
+                put(COLUMN_MESSAGE, message.message)
+                put(COLUMN_MESSAGE_IMAGE_URL, saveFileToInternalStorage(message.messageImageUrl, "images"))
+                put(COLUMN_VIDEO_IMAGE_URL, saveFileToInternalStorage(message.videoImageUrl, "videos"))
+                put(COLUMN_VOICE_MEMO_URL, saveFileToInternalStorage(message.voiceMemoUrl, "audios"))
+                put(COLUMN_DOCUMENT_URL, saveFileToInternalStorage(message.documentUrl, "documents"))
+                put(COLUMN_SENT, isSent)
+            }
+            val success = db.insert(TABLE_COMMUNITY_CHAT_MESSAGES, null, contentValues)
+            if (success == -1L) {
+                Log.e(ContentValues.TAG, "Error inserting message")
+            } else {
+                Log.d(ContentValues.TAG, "Message inserted successfully")
+            }
+        } catch (e: Exception) {
+            Log.e(ContentValues.TAG, "Error inserting message: ${e.message}")
+        } finally {
+            db.close()
+        }
+    }
+
+    private fun saveFileToInternalStorage(fileUrl: String, directoryName: String): String {
+        val file = File(fileUrl)
+        val directory = File(context.filesDir, directoryName)
+        if (!directory.exists()) {
+            directory.mkdirs()
+        }
+        val destinationFile = File(directory, file.name)
+        try {
+            val inputStream = file.inputStream()
+            val outputStream = FileOutputStream(destinationFile)
+            inputStream.copyTo(outputStream)
+            inputStream.close()
+            outputStream.close()
+            return destinationFile.absolutePath
+        } catch (e: IOException) {
+            Log.e(ContentValues.TAG, "Error saving file: ${e.message}")
+            return ""
+        }
     }
 
     //give me edit message function with this signature     fun editMessageInMentorChat(messageId: String, message: String) {

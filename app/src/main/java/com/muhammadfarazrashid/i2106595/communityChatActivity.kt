@@ -356,16 +356,6 @@ class communityChatActivity : AppCompatActivity(), ScreenshotDetectionDelegate.S
                         val webserviceHelper = WebserviceHelper(this)
                         webserviceHelper.deleteMessage(chatMessage.id, "community_chat")
                         chatAdapter.removeMessage(chatMessage.id)
-//                        if(chatMessage.messageImageUrl.isNotEmpty())
-//                            FirebaseManager.deleteMessageInDatabase(chatMessage.id, "community_chats","chat_images" ,currentMentor.id, chatAdapter)
-//                        else if(chatMessage.videoImageUrl.isNotEmpty())
-//                            FirebaseManager.deleteMessageInDatabase(chatMessage.id, "community_chats","chat_videos" ,currentMentor.id, chatAdapter)
-//                        else if(chatMessage.voiceMemoUrl.isNotEmpty())
-//                            FirebaseManager.deleteMessageInDatabase(chatMessage.id, "community_chats","chat_audios" ,currentMentor.id, chatAdapter)
-//                        else if(chatMessage.documentUrl.isNotEmpty())
-//                            FirebaseManager.deleteMessageInDatabase(chatMessage.id, "community_chats","chat_documents" ,currentMentor.id, chatAdapter)
-//                        else
-//                            FirebaseManager.deleteMessageInDatabase(chatMessage.id, "community_chats","chat_messages" ,currentMentor.id, chatAdapter)
                         true
                     }
                     else -> false
@@ -405,8 +395,23 @@ class communityChatActivity : AppCompatActivity(), ScreenshotDetectionDelegate.S
                             ""
                         ), currentMentor.id
                     )
+
+                    dbHelper.sendMessageInCommunityChat(
+                        ChatMessage(
+                            messageId,
+                            message,
+                            currentTime,
+                            true,
+                            "",
+                            "",
+                            "",
+                            "",
+                            ""
+                        ), currentMentor.id,
+                        true)
                 }
                 else{
+                    Log.d("MentorChatActivity", "Saving message to database")
                     dbHelper.sendMessageInCommunityChat(
                         ChatMessage(
                             messageId,
@@ -438,6 +443,7 @@ class communityChatActivity : AppCompatActivity(), ScreenshotDetectionDelegate.S
             }
             // Clear the message field
             messageField.text.clear()
+            scrollToBottom()
         }
     }
 
@@ -483,13 +489,6 @@ class communityChatActivity : AppCompatActivity(), ScreenshotDetectionDelegate.S
                         }
 
 
-//                        FirebaseManager.sendImageToStorage(
-//                            selectedFileUri,
-//                            currentMentor.id,
-//                            "community_chats",
-//                            chatAdapter,
-//                            "chat_images"
-//                        )
                     }
                     FileType.VIDEO -> {
 
@@ -500,13 +499,6 @@ class communityChatActivity : AppCompatActivity(), ScreenshotDetectionDelegate.S
                             chatAdapter.addMessage(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, currentMentor.getprofilePictureUrl(), "", url, "", ""))
                         }
 
-//                        FirebaseManager.sendImageToStorage(
-//                            selectedFileUri,
-//                            currentMentor.id,
-//                            "community_chats",
-//                            chatAdapter,
-//                            "chat_videos"
-//                        )
                     }
                     FileType.PDF -> {
 
@@ -517,13 +509,6 @@ class communityChatActivity : AppCompatActivity(), ScreenshotDetectionDelegate.S
                             chatAdapter.addMessage(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, currentMentor.getprofilePictureUrl(), "", "", "", url))
                         }
 
-//                        FirebaseManager.sendImageToStorage(
-//                            selectedFileUri,
-//                            currentMentor.id,
-//                            "community_chats",
-//                            chatAdapter,
-//                            "chat_documents"
-//                        )
                     }
                         FileType.AUDIO -> {
 
@@ -534,13 +519,6 @@ class communityChatActivity : AppCompatActivity(), ScreenshotDetectionDelegate.S
                                 chatAdapter.addMessage(ChatMessage(UUID.randomUUID().toString(), "",currentTime , true, currentMentor.getprofilePictureUrl(), "", "", url, ""))
                             }
 
-//                            FirebaseManager.sendImageToStorage(
-//                                selectedFileUri,
-//                                currentMentor.id,
-//                                "community_chats",
-//                                chatAdapter,
-//                                "chat_audio"
-//                            )
                         }
                         }
             } else {
@@ -668,153 +646,46 @@ class communityChatActivity : AppCompatActivity(), ScreenshotDetectionDelegate.S
         }
 
 
-//        chatRef.addListenerForSingleValueEvent(object : ValueEventListener {
-//            override fun onDataChange(dataSnapshot: DataSnapshot) {
-//                for (messageSnapshot in dataSnapshot.children) {
-//                    Log.d("MentorChatActivity", "Value = ${messageSnapshot.value}")
-//                    val userId = messageSnapshot.value
-//                    userIds.add(userId.toString())
-//
-//                }
-//                // Once user IDs are fetched, fetch user details
-//                fetchUserDetails(userIds, users)
-//            }
-//
-//            override fun onCancelled(databaseError: DatabaseError) {
-//                Log.e("MentorChatActivity", "Failed to retrieve chat messages: ${databaseError.message}")
-//            }
-
 
         return users
     }
 
 
 
-
-    private fun fetchUserDetails(userIds: List<String>, users: ArrayList<User>) {
-        val database = FirebaseDatabase.getInstance()
-        val userRef = database.getReference("users")
-
-        userRef.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(dataSnapshot: DataSnapshot) {
-                for (messageSnapshot in dataSnapshot.children) {
-                    val userId = messageSnapshot.key.toString()
-                    Log.d("MentorChatActivity2", "Value = ${messageSnapshot.value}")
-                    if(userIds.contains(userId)){
-                        val name = messageSnapshot.child("name").value as String
-                        val email = messageSnapshot.child("email").value as String
-                        val fcmToken:String
-                        fcmToken= messageSnapshot.child("fcmToken").value as String
-                        Log.d("MentorChatActivityTOKEN", "Value = ${fcmToken}")
-
-
-                        if(messageSnapshot.child("profilePictureUrl").value==null){
-                            val profilePictureUrl = ""
-                            val user = User(userId, name, email,"","","","", profilePictureUrl,"",fcmToken)
-                            users.add(user)
-                        }
-                        else{
-                            val profilePictureUrl = messageSnapshot.child("profilePictureUrl").value as String
-                            val user = User(userId, name, email,"","","","", profilePictureUrl,"",fcmToken)
-                            users.add(user)
-                        }
-
-                    }
-                }
-                for(user in users){
-                    Log.d("MentorChatActivity3", "UserTOKEN = ${user.fcmToken}")
-                }
-
-                fetchUserMessages(currentMentor.getprofilePictureUrl())
-
-            }
-
-            override fun onCancelled(databaseError: DatabaseError) {
-                Log.e("MentorChatActivity", "Failed to retrieve chat messages: ${databaseError.message}")
-            }
-        })
-    }
-
     private fun fetchUserMessages(mentorImageUrl: String) {
 
         val webserviceHelper = WebserviceHelper(this)
-        UserManager.getCurrentUser()?.let { it1 ->
-            webserviceHelper.fetchMessagesInCommunityChat(it1.id,currentMentor.id, currentMentor.getprofilePictureUrl(),listOfUsers){
-                //iterate through the messages and log them
-                chatAdapter.addMessages(it)
-                //scrollToBottom()
+        if(networkChangeReceiver.isOnline(this)) {
+            UserManager.getCurrentUser()?.let { it1 ->
+                webserviceHelper.fetchMessagesInCommunityChat(
+                    it1.id,
+                    currentMentor.id,
+                    currentMentor.getprofilePictureUrl(),
+                    listOfUsers
+                ) {
+                    //iterate through the messages and log them
+                    chatAdapter.addMessages(it)
+                    scrollToBottom()
+                }
             }
         }
-
-//        val database = FirebaseDatabase.getInstance()
-//        val currentUser = UserManager.getCurrentUser()?.id
-//        val chatRef = currentUser?.let { database.getReference("chat").child("community_chats").child(currentMentor.id).child("messages") }
-//
-//        for(user in listOfUsers){
-//            Log.d("MentorChatActivity4", "User = ${user.profilePictureUrl}")
-//        }
-//
-//        chatRef?.addChildEventListener(object : ChildEventListener {
-//            override fun onChildAdded(dataSnapshot: DataSnapshot, previousChildName: String?) {
-//                val message = dataSnapshot.child("message").value as String
-//                val time = dataSnapshot.child("time").value as String
-//                val date = dataSnapshot.child("date").value as String
-//                val userId = dataSnapshot.child("userId").value as String
-//                val messageId= dataSnapshot.key.toString()
-//                val isCurrentUser = userId == currentUser
-//
-//                if(!isCurrentUser){
-//                    dataSnapshot.child("isRead").ref.setValue(true)
-//                }
-//                Log.d("MentorChatActivity5", "User = $message")
-//
-//                var messageImageUrl=""
-//                var messageVideoUrl=""
-//                var messageAudioUrl=""
-//                var messageDocumentUrl=""
-//                if(dataSnapshot.child("messageImageUrl").exists())
-//                    messageImageUrl= dataSnapshot.child("messageImageUrl").value as String
-//                if(dataSnapshot.child("messageVideoUrl").exists())
-//                    messageVideoUrl= dataSnapshot.child("messageVideoUrl").value as String
-//                if(dataSnapshot.child("messageAudioUrl").exists())
-//                    messageAudioUrl= dataSnapshot.child("messageAudioUrl").value as String
-//                if(dataSnapshot.child("messageDocumentUrl").exists())
-//                    messageDocumentUrl= dataSnapshot.child("messageDocumentUrl").value as String
-//
-//                if(!isCurrentUser&& userId!=currentMentor.id){
-//                    Log.d("MentorChatActivity6", "User = $userId")
-//                    val user = listOfUsers.find { it.id==userId }
-//                    if(user!=null){
-//                        chatAdapter.addMessage(ChatMessage(messageId,message, time, isCurrentUser, user.profilePictureUrl,messageImageUrl,messageVideoUrl,messageAudioUrl,messageDocumentUrl))
-//                    }
-//                }
-//                else
-//                    chatAdapter.addMessage(ChatMessage(messageId,message, time, isCurrentUser, mentorImageUrl,messageImageUrl,messageVideoUrl,messageAudioUrl,messageDocumentUrl))
-//
-//                scrollToBottom()
-//            }
-//
-//            override fun onChildChanged(dataSnapshot: DataSnapshot, previousChildName: String?) {
-//                chatAdapter.editMessage(dataSnapshot.key.toString(), dataSnapshot.child("message").value as String)
-//
-//            }
-//
-//            override fun onChildRemoved(dataSnapshot: DataSnapshot) {
-//                val userId = dataSnapshot.child("userId").value as String
-//                if((userId!= UserManager.getCurrentUser()?.id ?: "") )
-//                    chatAdapter.removeMessage(dataSnapshot.key.toString())
-//
-//            }
-//
-//            override fun onChildMoved(dataSnapshot: DataSnapshot, previousChildName: String?) {
-//                // Handle child moved event if needed
-//            }
-//
-//            override fun onCancelled(databaseError: DatabaseError) {
-//                Log.e("MentorChatActivity", "Failed to retrieve chat messages: ${databaseError.message}")
-//            }
-//        })
+        else{
+            val messages = UserManager.getCurrentUser()?.let {
+                dbHelper.fetchMessagesInCommunityChat(
+                    it.id,
+                    currentMentor.id,
+                    currentMentor.getprofilePictureUrl(),
+                    listOfUsers
+                ) {
+                    //iterate through the messages and log them
+                    chatAdapter.addMessages(it)
+                    scrollToBottom()
+                }
+            }
+        }
     }
+
+
 
 
     override fun onScreenCaptured(path: String) {
@@ -876,8 +747,6 @@ class communityChatActivity : AppCompatActivity(), ScreenshotDetectionDelegate.S
             recyclerView.smoothScrollToPosition(chatAdapter.itemCount - 1)
         }
     }
-
-
 
 
 }
